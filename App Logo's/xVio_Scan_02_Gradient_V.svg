@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="0.5" y2="1"><stop offset="0%" stop-color="#0A1A3A"/><stop offset="100%" stop-color="#0D0D2B"/></linearGradient>
+    <linearGradient id="vG2" x1="0" y1="0" x2="0.5" y2="1"><stop offset="0%" stop-color="#00E5FF"/><stop offset="100%" stop-color="#8B5CF6"/></linearGradient>
+    <linearGradient id="beamG" x1="0.5" y1="0" x2="0.5" y2="1"><stop offset="0%" stop-color="#00E5FF" stop-opacity="0.6"/><stop offset="100%" stop-color="#00E5FF" stop-opacity="0"/></linearGradient>
+    <filter id="vGlow2"><feGaussianBlur stdDeviation="12" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="beamBlur"><feGaussianBlur stdDeviation="4"/></filter>
+    <clipPath id="roundClip2"><rect width="1024" height="1024" rx="220" ry="220"/></clipPath>
+  </defs>
+  <g clip-path="url(#roundClip2)">
+    <rect width="1024" height="1024" fill="url(#bg2)"/>
+    <g opacity="0.04" stroke="#00E5FF" stroke-width="1">
+      <line x1="0" y1="128" x2="1024" y2="128"/><line x1="0" y1="256" x2="1024" y2="256"/>
+      <line x1="0" y1="384" x2="1024" y2="384"/><line x1="0" y1="512" x2="1024" y2="512"/>
+      <line x1="0" y1="640" x2="1024" y2="640"/><line x1="0" y1="768" x2="1024" y2="768"/>
+      <line x1="128" y1="0" x2="128" y2="1024"/><line x1="256" y1="0" x2="256" y2="1024"/>
+      <line x1="384" y1="0" x2="384" y2="1024"/><line x1="512" y1="0" x2="512" y2="1024"/>
+      <line x1="640" y1="0" x2="640" y2="1024"/><line x1="768" y1="0" x2="768" y2="1024"/>
+    </g>
+    <path d="M512,580 L320,820 L704,820Z" fill="url(#beamG)" filter="url(#beamBlur)"/>
+    <path d="M280,180 L480,550 L512,580 L544,550 L744,180" fill="none" stroke="url(#vG2)" stroke-width="56" stroke-linecap="round" stroke-linejoin="round" filter="url(#vGlow2)"/>
+    <rect x="400" y="650" width="224" height="6" rx="3" fill="#00E5FF" opacity="0.4"/>
+    <rect x="420" y="675" width="184" height="6" rx="3" fill="#00E5FF" opacity="0.3"/>
+    <rect x="440" y="700" width="144" height="6" rx="3" fill="#00E5FF" opacity="0.2"/>
+    <path d="M120,180 L120,120 L180,120" fill="none" stroke="#00E5FF" stroke-width="4" stroke-linecap="round" opacity="0.4"/>
+    <path d="M844,120 L904,120 L904,180" fill="none" stroke="#8B5CF6" stroke-width="4" stroke-linecap="round" opacity="0.4"/>
+    <path d="M120,844 L120,904 L180,904" fill="none" stroke="#00E5FF" stroke-width="4" stroke-linecap="round" opacity="0.4"/>
+    <path d="M844,904 L904,904 L904,844" fill="none" stroke="#8B5CF6" stroke-width="4" stroke-linecap="round" opacity="0.4"/>
+    <text x="512" y="870" text-anchor="middle" font-family="'SF Pro Display','Segoe UI',Arial,sans-serif" font-weight="700" font-size="80" fill="url(#vG2)">xVio</text>
+    <text x="512" y="930" text-anchor="middle" font-family="'SF Pro Display','Segoe UI',Arial,sans-serif" font-weight="300" font-size="40" fill="#00E5FF" letter-spacing="14" opacity="0.6">SCAN</text>
+  </g>
+</svg>
