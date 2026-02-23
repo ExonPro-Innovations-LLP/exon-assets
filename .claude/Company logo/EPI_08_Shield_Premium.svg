@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 550" width="500" height="550">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#1A2980"/>
+      <stop offset="50%" stop-color="#0F2557"/>
+      <stop offset="100%" stop-color="#091428"/>
+    </linearGradient>
+    <linearGradient id="goldLine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#B8860B"/>
+      <stop offset="50%" stop-color="#DAA520"/>
+      <stop offset="100%" stop-color="#B8860B"/>
+    </linearGradient>
+    <linearGradient id="silverText" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#C0C0C0"/>
+    </linearGradient>
+    <filter id="shieldShadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Shield shape -->
+  <path d="M 250,30 L 430,100 L 430,280 C 430,380 350,450 250,490 C 150,450 70,380 70,280 L 70,100 Z"
+        fill="url(#shieldGrad)" filter="url(#shieldShadow)"/>
+
+  <!-- Shield border -->
+  <path d="M 250,30 L 430,100 L 430,280 C 430,380 350,450 250,490 C 150,450 70,380 70,280 L 70,100 Z"
+        fill="none" stroke="url(#goldLine)" stroke-width="2"/>
+
+  <!-- Inner shield border -->
+  <path d="M 250,55 L 410,115 L 410,275 C 410,365 338,430 250,465 C 162,430 90,365 90,275 L 90,115 Z"
+        fill="none" stroke="url(#goldLine)" stroke-width="0.5" opacity="0.4"/>
+
+  <!-- E Letter -->
+  <rect x="128" y="200" width="18" height="110" rx="2" fill="url(#silverText)"/>
+  <rect x="128" y="200" width="58" height="18" rx="2" fill="url(#silverText)"/>
+  <rect x="128" y="246" width="45" height="18" rx="2" fill="url(#silverText)"/>
+  <rect x="128" y="292" width="58" height="18" rx="2" fill="url(#silverText)"/>
+
+  <!-- P Letter -->
+  <rect x="210" y="200" width="18" height="110" rx="2" fill="url(#silverText)"/>
+  <path d="M 228,200 L 262,200 C 290,200 298,216 298,233 C 298,250 290,266 262,266 L 228,266 L 228,248 L 257,248 C 273,248 278,242 278,233 C 278,224 273,218 257,218 L 228,218 Z" fill="url(#silverText)"/>
+
+  <!-- I Letter -->
+  <rect x="318" y="200" width="55" height="18" rx="2" fill="url(#silverText)"/>
+  <rect x="337" y="200" width="18" height="110" rx="2" fill="url(#silverText)"/>
+  <rect x="318" y="292" width="55" height="18" rx="2" fill="url(#silverText)"/>
+
+  <!-- Gold accent line -->
+  <rect x="128" y="325" width="245" height="2.5" rx="1.25" fill="url(#goldLine)"/>
+
+  <!-- Small star accents -->
+  <polygon points="250,165 254,175 265,175 256,181 259,192 250,185 241,192 244,181 235,175 246,175"
+           fill="url(#goldLine)" opacity="0.6"/>
+
+  <!-- Tagline below shield -->
+  <text x="250" y="530"
+        text-anchor="middle"
+        font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        font-weight="600" font-size="22"
+        fill="#0F2557" letter-spacing="6">EXONPRO INNOVATIONS</text>
+</svg>

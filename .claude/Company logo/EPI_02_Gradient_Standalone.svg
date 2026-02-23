@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 300" width="600" height="300">
+  <defs>
+    <linearGradient id="blueGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0052D4"/>
+      <stop offset="45%" stop-color="#4364F7"/>
+      <stop offset="100%" stop-color="#6FB1FC"/>
+    </linearGradient>
+    <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0052D4" stop-opacity="0"/>
+      <stop offset="20%" stop-color="#4364F7"/>
+      <stop offset="80%" stop-color="#4364F7"/>
+      <stop offset="100%" stop-color="#6FB1FC" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- E Letter - Bold Geometric -->
+  <!-- E vertical -->
+  <rect x="100" y="50" width="28" height="150" rx="3" fill="url(#blueGrad)"/>
+  <!-- E top -->
+  <rect x="100" y="50" width="85" height="28" rx="3" fill="url(#blueGrad)"/>
+  <!-- E middle -->
+  <rect x="100" y="111" width="68" height="28" rx="3" fill="url(#blueGrad)"/>
+  <!-- E bottom -->
+  <rect x="100" y="172" width="85" height="28" rx="3" fill="url(#blueGrad)"/>
+
+  <!-- P Letter -->
+  <!-- P vertical -->
+  <rect x="215" y="50" width="28" height="150" rx="3" fill="url(#blueGrad)"/>
+  <!-- P bowl -->
+  <path d="M 243,50 L 280,50 C 318,50 328,76 328,100 C 328,126 318,152 280,152 L 243,152 L 243,124 L 274,124 C 295,124 300,112 300,100 C 300,88 295,78 274,78 L 243,78 Z" fill="url(#blueGrad)"/>
+
+  <!-- I Letter -->
+  <!-- I top serif -->
+  <rect x="360" y="50" width="80" height="28" rx="3" fill="url(#blueGrad)"/>
+  <!-- I vertical -->
+  <rect x="386" y="50" width="28" height="150" rx="3" fill="url(#blueGrad)"/>
+  <!-- I bottom serif -->
+  <rect x="360" y="172" width="80" height="28" rx="3" fill="url(#blueGrad)"/>
+
+  <!-- Decorative line -->
+  <rect x="60" y="218" width="480" height="2" rx="1" fill="url(#lineGrad)"/>
+
+  <!-- Company name -->
+  <text x="300" y="258" text-anchor="middle"
+        font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        font-weight="300" font-size="22"
+        fill="#4364F7" letter-spacing="10">EXONPRO INNOVATIONS</text>
+</svg>
