@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>xVio Scan — Technical Solution Overview</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 20mm 18mm 24mm 18mm;
+    }
+
+    @media print {
+      body { font-size: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .no-print { display: none; }
+      .page-break { page-break-before: always; }
+      .avoid-break { page-break-inside: avoid; }
+      .footer-screen { display: none; }
+      .print-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 16mm;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 9px;
+        color: #94A3B8;
+        font-family: 'Segoe UI', sans-serif;
+        border-top: 1px solid #E2E8F0;
+        padding-top: 4px;
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      color: #1a1a2e; line-height: 1.65; padding: 40px; max-width: 900px; margin: 0 auto;
+      background: #fff;
+    }
+
+    /* ── Title Page ── */
+    .title-page {
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      min-height: 85vh; text-align: center; padding: 60px 40px;
+    }
+    .title-page .logo-mark {
+      width: 80px; height: 80px; border-radius: 20px; background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+      display: flex; align-items: center; justify-content: center; margin-bottom: 32px;
+      color: white; font-size: 32px; font-weight: 800; letter-spacing: -1px;
+    }
+    .title-page h1 { font-size: 38px; color: #4F46E5; margin-bottom: 8px; letter-spacing: -0.5px; }
+    .title-page .subtitle { font-size: 20px; color: #64748B; margin-bottom: 40px; font-weight: 400; }
+    .title-page .desc {
+      max-width: 560px; font-size: 14px; color: #475569; line-height: 1.8; margin-bottom: 48px;
+    }
+    .title-page .divider { width: 60px; height: 3px; background: #4F46E5; border-radius: 2px; margin-bottom: 32px; }
+    .title-page .meta { font-size: 13px; color: #94A3B8; line-height: 2; }
+    .title-page .meta strong { color: #64748B; }
+    .title-page .badge {
+      display: inline-block; background: #EEF2FF; color: #4F46E5; padding: 6px 20px;
+      border-radius: 20px; font-weight: 600; font-size: 13px; margin-top: 24px;
+    }
+
+    /* ── Headings ── */
+    h2 { font-size: 20px; color: #4F46E5; margin: 36px 0 14px; padding-bottom: 6px; border-bottom: 2px solid #E2E8F0; }
+    h3 { font-size: 15px; color: #1E293B; margin: 20px 0 10px; }
+    h4 { font-size: 13px; color: #475569; margin: 14px 0 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    p { margin: 8px 0; font-size: 13px; }
+    ul, ol { margin: 8px 0 8px 20px; font-size: 13px; }
+    li { margin: 4px 0; }
+
+    /* ── Tables ── */
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12px; }
+    th { background: #F1F5F9; text-align: left; padding: 8px 10px; font-weight: 600; color: #475569; border: 1px solid #E2E8F0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+    td { padding: 7px 10px; border: 1px solid #E2E8F0; vertical-align: top; }
+    tr:nth-child(even) td { background: #FAFBFC; }
+
+    /* ── Components ── */
+    .highlight { background: #EEF2FF; border-left: 4px solid #4F46E5; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 14px 0; }
+    .highlight p { margin: 0; }
+    .section-label { display: inline-block; background: #4F46E5; color: white; padding: 2px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-bottom: 6px; }
+    code { background: #F1F5F9; padding: 2px 6px; border-radius: 4px; font-size: 12px; font-family: 'SF Mono', 'Fira Code', monospace; }
+    .flow-box { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin: 12px 0; }
+    .flow-step { display: flex; align-items: flex-start; gap: 12px; margin: 10px 0; }
+    .flow-step .num { background: #4F46E5; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+    .flow-step .desc { font-size: 13px; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    .tag-green { background: #D1FAE5; color: #065F46; }
+    .tag-blue { background: #DBEAFE; color: #1E40AF; }
+
+    /* ── Architecture Diagram ── */
+    .arch { margin: 16px 0; }
+    .arch-row { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 0; position: relative; }
+    .arch-row.gap { margin: 14px 0; }
+    .arch-block {
+      border: 2px solid #CBD5E1; border-radius: 10px; padding: 10px 14px; text-align: center;
+      background: #fff; min-width: 100px; position: relative; font-size: 12px;
+    }
+    .arch-block .block-title { font-weight: 700; font-size: 12px; color: #1E293B; }
+    .arch-block .block-sub { font-size: 10px; color: #64748B; margin-top: 2px; }
+    .arch-block.primary { border-color: #4F46E5; background: #EEF2FF; }
+    .arch-block.primary .block-title { color: #4F46E5; }
+    .arch-block.aws { border-color: #F59E0B; background: #FFFBEB; }
+    .arch-block.aws .block-title { color: #92400E; }
+    .arch-block.sf { border-color: #00A1E0; background: #E6F6FD; }
+    .arch-block.sf .block-title { color: #0071AD; }
+    .arch-block.green { border-color: #10B981; background: #ECFDF5; }
+    .arch-block.green .block-title { color: #065F46; }
+    .arch-block.storage { border-color: #8B5CF6; background: #F5F3FF; }
+    .arch-block.storage .block-title { color: #6D28D9; }
+    .arch-arrow { color: #94A3B8; font-size: 20px; font-weight: 700; line-height: 1; }
+    .arch-arrow.down { text-align: center; margin: 6px 0; font-size: 16px; }
+    .arch-label { font-size: 10px; color: #64748B; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .arch-connector { text-align: center; margin: 4px 0; color: #94A3B8; font-size: 14px; }
+    .arch-section-label { text-align: center; margin: 14px 0 6px; }
+    .arch-section-label span { background: #F1F5F9; padding: 3px 12px; border-radius: 4px; font-size: 10px; font-weight: 600; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* ── TOC ── */
+    .toc { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px 24px; margin: 20px 0; }
+    .toc h3 { margin-top: 0; }
+    .toc ol { margin-left: 18px; }
+    .toc li { margin: 5px 0; font-size: 13px; }
+    .toc a { color: #4F46E5; text-decoration: none; }
+
+    /* ── Contact Page ── */
+    .contact-page {
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      min-height: 70vh; text-align: center; padding: 80px 40px;
+    }
+    .contact-page h2 { border-bottom: none; margin-bottom: 20px; font-size: 26px; }
+    .contact-page .contact-desc { font-size: 15px; color: #475569; max-width: 480px; line-height: 1.8; margin-bottom: 40px; }
+    .contact-card {
+      background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px;
+      padding: 32px 48px; text-align: center;
+    }
+    .contact-card .contact-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #94A3B8; margin-bottom: 8px; font-weight: 600; }
+    .contact-card .contact-email { font-size: 22px; color: #4F46E5; font-weight: 600; text-decoration: none; }
+    .contact-card .contact-email:hover { text-decoration: underline; }
+    .contact-meta { margin-top: 40px; font-size: 12px; color: #94A3B8; line-height: 2; }
+    .contact-meta a { color: #4F46E5; text-decoration: none; }
+
+    /* ── Print footer (fixed on every page) ── */
+    .print-footer { display: none; }
+
+    /* ── Screen-only footer ── */
+    .footer-screen { margin-top: 40px; padding-top: 16px; border-top: 1px solid #E2E8F0; font-size: 11px; color: #94A3B8; text-align: center; }
+  </style>
+</head>
+<body>
+
+<!-- Print-only fixed footer (appears on every page) -->
+<div class="print-footer">xVio Scan by ExonPro Innovations LLP &bull; March 2026</div>
+
+<!-- ═══════════════════════════════════════════ TITLE PAGE ═══════════════════════════════════════════ -->
+<div class="title-page">
+  <div class="logo-mark">xV</div>
+  <h1>xVio Scan</h1>
+  <div class="subtitle">Technical Solution Overview</div>
+  <div class="divider"></div>
+  <p class="desc">
+    xVio Scan is an AI-powered document scanning platform that transforms physical documents — business cards, invoices, receipts, ID documents, handwritten notes, forms, and contracts — into structured, exportable data. It integrates natively with Salesforce as a Connected App, enabling organisations to capture document data directly into Salesforce CRM objects.
+  </p>
+  <div class="meta">
+    <strong>Prepared by</strong><br>
+    ExonPro Innovations LLP<br><br>
+    <strong>Date</strong><br>
+    March 2026
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ TOC ═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<div class="toc">
+  <h3>Table of Contents</h3>
+  <ol>
+    <li><a href="#overview">Solution Overview</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#salesforce-integration">Salesforce Integration</a></li>
+    <li><a href="#data-flow">Data Flow — Scan to Salesforce</a></li>
+    <li><a href="#api-endpoints">API Endpoints (Scan-Related)</a></li>
+    <li><a href="#auth-security">Authentication &amp; Security</a></li>
+    <li><a href="#data-security">Data Security &amp; Encryption</a></li>
+    <li><a href="#tenant-isolation">Multi-Tenant Isolation</a></li>
+    <li><a href="#input-validation">Input Validation &amp; API Security</a></li>
+    <li><a href="#infrastructure">Infrastructure Security</a></li>
+    <li><a href="#mobile">Mobile Application Security</a></li>
+    <li><a href="#components">Components &amp; Platforms</a></li>
+  </ol>
+</div>
+
+<!-- ═══════════════════════════════════════════ 1. OVERVIEW ═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h2 id="overview">1. Solution Overview</h2>
+
+<p><strong>xVio Scan</strong> is an AI-powered document scanning platform that transforms physical documents — business cards, invoices, receipts, ID documents, forms, and contracts — into structured, exportable data. It integrates natively with Salesforce as a Connected App, enabling organisations to capture document data directly into Salesforce CRM objects.</p>
+
+<h3>How It Works</h3>
+<div class="flow-box avoid-break">
+  <div class="flow-step"><div class="num">1</div><div class="desc"><strong>Capture</strong> — Users scan documents via mobile camera (iOS/Android) or upload images/PDFs from the web interface.</div></div>
+  <div class="flow-step"><div class="num">2</div><div class="desc"><strong>OCR Extraction</strong> — AWS Textract extracts raw text, layout, tables, and form fields from the document image.</div></div>
+  <div class="flow-step"><div class="num">3</div><div class="desc"><strong>AI Field Extraction</strong> — AWS Bedrock (LLM) parses the extracted text into structured fields (names, emails, phone numbers, addresses, invoice line items, etc.) using a configurable prompt template per document type.</div></div>
+  <div class="flow-step"><div class="num">4</div><div class="desc"><strong>Auto Export</strong> — Extracted data is automatically exported to Salesforce as Leads, Contacts, Cases, or custom objects with admin-configurable field mappings.</div></div>
+</div>
+
+<h3>Key Capabilities</h3>
+<table class="avoid-break">
+  <tr><th>Capability</th><th>Description</th></tr>
+  <tr><td>Document Scanning</td><td>Business cards, invoices, receipts, ID documents, forms, contracts, handwritten notes</td></tr>
+  <tr><td>Two-Stage AI Pipeline</td><td>AWS Textract (OCR) + AWS Bedrock (LLM) for accurate structured extraction</td></tr>
+  <tr><td>Salesforce CRM Export</td><td>Direct export to Leads, Contacts, Cases, and custom sObjects with configurable field mappings</td></tr>
+  <tr><td>Campaign Attribution</td><td>Tag scans to Salesforce Campaigns for lead source tracking and ROI measurement</td></tr>
+  <tr><td>Offline Mode</td><td>Full scanning at trade shows and field sites — auto-syncs when connectivity is restored</td></tr>
+  <tr><td>Multi-Document Types</td><td>Configurable xVio Services — each with its own Textract API + AI model pipeline</td></tr>
+  <tr><td>Webhook &amp; Email Export</td><td>Export extracted data via webhooks or email (Pro and Enterprise plans)</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════ 2. ARCHITECTURE ═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h2 id="architecture">2. Architecture</h2>
+
+<p>xVio Scan is a <strong>100% serverless application</strong> built on AWS. No customer data leaves AWS infrastructure.</p>
+
+<div class="arch avoid-break">
+  <!-- Salesforce -->
+  <div class="arch-row">
+    <div class="arch-block sf" style="min-width:180px;">
+      <div class="block-title">Salesforce Org</div>
+      <div class="block-sub">Connected App</div>
+    </div>
+  </div>
+  <div class="arch-connector">&#9475;<br><span class="arch-label">OAuth 2.0 + PKCE</span><br>&#9475;</div>
+
+  <!-- Edge Layer -->
+  <div class="arch-section-label"><span>Edge Layer</span></div>
+  <div class="arch-row">
+    <div class="arch-block primary">
+      <div class="block-title">Mobile App</div>
+      <div class="block-sub">iOS / Android / Web</div>
+    </div>
+    <div class="arch-arrow">&#8594; <span class="arch-label">HTTPS</span> &#8594;</div>
+    <div class="arch-block aws">
+      <div class="block-title">CloudFront + WAF</div>
+      <div class="block-sub">CDN, Security Headers</div>
+    </div>
+    <div class="arch-arrow">&#8594; <span class="arch-label">HTTPS</span> &#8594;</div>
+    <div class="arch-block aws">
+      <div class="block-title">API Gateway</div>
+      <div class="block-sub">REST v1</div>
+    </div>
+  </div>
+  <div class="arch-connector">&#9475;</div>
+
+  <!-- Compute Layer -->
+  <div class="arch-section-label"><span>Compute Layer (AWS Lambda)</span></div>
+  <div class="arch-row">
+    <div class="arch-block green">
+      <div class="block-title">Auth</div>
+      <div class="block-sub">OAuth, JWT, Sessions</div>
+    </div>
+    <div class="arch-block green">
+      <div class="block-title">Jobs</div>
+      <div class="block-sub">Upload, List, CRUD</div>
+    </div>
+    <div class="arch-block green">
+      <div class="block-title">AI Service</div>
+      <div class="block-sub">OCR + LLM Pipeline</div>
+    </div>
+    <div class="arch-block green">
+      <div class="block-title">Quota</div>
+      <div class="block-sub">Dual-Level Limits</div>
+    </div>
+    <div class="arch-block green">
+      <div class="block-title">Export</div>
+      <div class="block-sub">Salesforce, Zoho</div>
+    </div>
+  </div>
+  <div class="arch-connector">&#9475;</div>
+
+  <!-- Service Layer -->
+  <div class="arch-section-label"><span>Service &amp; Data Layer</span></div>
+  <div class="arch-row">
+    <div class="arch-block aws">
+      <div class="block-title">Secrets Manager</div>
+      <div class="block-sub">JWT Keys, SF Creds</div>
+    </div>
+    <div class="arch-block storage">
+      <div class="block-title">S3</div>
+      <div class="block-sub">Document Storage</div>
+    </div>
+    <div class="arch-block aws">
+      <div class="block-title">Textract + Bedrock</div>
+      <div class="block-sub">OCR &amp; AI Extraction</div>
+    </div>
+    <div class="arch-block storage">
+      <div class="block-title">DynamoDB</div>
+      <div class="block-sub">Single-Table Design</div>
+    </div>
+    <div class="arch-block storage">
+      <div class="block-title">SQS</div>
+      <div class="block-sub">Job Queue</div>
+    </div>
+    <div class="arch-block sf">
+      <div class="block-title">Salesforce API</div>
+      <div class="block-sub">REST Export</div>
+    </div>
+  </div>
+</div>
+
+<h3>AWS Infrastructure Summary</h3>
+<table class="avoid-break">
+  <tr><th>Component</th><th>AWS Service</th><th>Purpose</th></tr>
+  <tr><td>Compute</td><td>AWS Lambda (Node.js 20, ARM64)</td><td>All backend logic — auth, scanning, export, admin</td></tr>
+  <tr><td>API</td><td>API Gateway (REST)</td><td>HTTPS REST endpoints with WAF protection</td></tr>
+  <tr><td>Database</td><td>DynamoDB (single-table design)</td><td>All application data — tenants, users, scans, quotas</td></tr>
+  <tr><td>Storage</td><td>S3 (4 buckets)</td><td>Document uploads, exports, feedback, static assets</td></tr>
+  <tr><td>Queue</td><td>SQS</td><td>Async job processing (scan pipeline)</td></tr>
+  <tr><td>AI — OCR</td><td>AWS Textract</td><td>Document text, forms, tables, expense, and ID extraction</td></tr>
+  <tr><td>AI — LLM</td><td>AWS Bedrock (Converse API)</td><td>Structured field extraction from OCR output</td></tr>
+  <tr><td>CDN</td><td>CloudFront (2 distributions)</td><td>API caching + widget CDN distribution</td></tr>
+  <tr><td>WAF</td><td>AWS WAF v2</td><td>OWASP rules, rate limiting, IP reputation</td></tr>
+  <tr><td>Secrets</td><td>AWS Secrets Manager</td><td>JWT keys, Salesforce credentials (per-tenant)</td></tr>
+  <tr><td>Real-time</td><td>AppSync (GraphQL WebSocket)</td><td>Live scan status updates to clients</td></tr>
+  <tr><td>Auth (Admin)</td><td>Amazon Cognito</td><td>Admin console authentication</td></tr>
+  <tr><td>Monitoring</td><td>CloudWatch + CloudTrail</td><td>Logging, alerting, audit trail</td></tr>
+  <tr><td>IaC</td><td>AWS CDK (TypeScript)</td><td>Infrastructure as Code — all resources version-controlled</td></tr>
+</table>
+
+<p><strong>Region:</strong> All resources deployed in <code>ap-south-1</code> (Mumbai, India). No data replication outside this region.</p>
+
+<!-- ═══════════════════════════════════════════ 3. SALESFORCE INTEGRATION ═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h2 id="salesforce-integration">3. Salesforce Integration</h2>
+
+<h3>Connected App Configuration</h3>
+<table class="avoid-break">
+  <tr><th>Setting</th><th>Value</th></tr>
+  <tr><td>OAuth Flow</td><td>Authorization Code with PKCE (RFC 7636, S256)</td></tr>
+  <tr><td>OAuth Scopes</td><td><code>api</code>, <code>refresh_token</code> (minimal scopes only)</td></tr>
+  <tr><td>Callback URL</td><td><code>https://api.xvio.ai/v1/tenant/auth/callback</code></td></tr>
+  <tr><td>Consumer Key/Secret Storage</td><td>AWS Secrets Manager (per-tenant isolation)</td></tr>
+  <tr><td>Token Exchange</td><td>Server-side only (Lambda) — client never sees client_secret</td></tr>
+  <tr><td>Sandbox Support</td><td>Yes — <code>test.salesforce.com</code> for sandbox, <code>login.salesforce.com</code> for production</td></tr>
+  <tr><td>Org ID Validation</td><td>Salesforce <code>organization_id</code> from userinfo validated against tenant config</td></tr>
+</table>
+
+<h3>Salesforce Data Operations</h3>
+<table class="avoid-break">
+  <tr><th>Operation</th><th>Description</th></tr>
+  <tr><td>CRM Export</td><td>Create/update Leads, Contacts, Cases, or custom sObjects from scanned data</td></tr>
+  <tr><td>Field Mapping</td><td>Admin-configurable mapping from extracted fields to Salesforce object fields</td></tr>
+  <tr><td>Campaign Association</td><td>Optional campaign ID, field name, or SOQL query for lead attribution</td></tr>
+  <tr><td>Token Refresh</td><td>Automatic — on 401 from Salesforce API, refresh token is exchanged, re-encrypted, and stored</td></tr>
+  <tr><td>API Limit Handling</td><td>Retry with exponential backoff on rate limit errors; user-facing error messages on persistent failures</td></tr>
+</table>
+
+<div class="highlight avoid-break">
+  <p><strong>Data stored from Salesforce:</strong> Only OAuth tokens (AES-256-GCM encrypted), instance URL (encrypted), and basic user profile (email, name). No Salesforce record data is persisted beyond the export operation.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════ 4. DATA FLOW ═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h2 id="data-flow">4. Data Flow — Scan to Salesforce</h2>
+
+<div class="flow-box">
+  <div class="flow-step"><div class="num">1</div><div class="desc"><strong>Upload</strong> — Client sends document image (JPEG/PNG/PDF/TIFF, max 50MB) via <code>POST /tenant/jobs</code> or presigned S3 upload. File stored in S3 under <code>{tenantId}/{appId}/{jobId}/</code> prefix with SSE-S3 encryption.</div></div>
+  <div class="flow-step"><div class="num">2</div><div class="desc"><strong>Queue</strong> — Upload handler validates quota (dual-level: per-user + per-org), creates a DynamoDB job record, and pushes a message to the SQS Jobs queue.</div></div>
+  <div class="flow-step"><div class="num">3</div><div class="desc"><strong>OCR</strong> — The AI orchestrator Lambda consumes from SQS. Stage 1 calls AWS Textract (DetectDocumentText, AnalyzeDocument, AnalyzeExpense, or AnalyzeID depending on the service pipeline config).</div></div>
+  <div class="flow-step"><div class="num">4</div><div class="desc"><strong>AI Extraction</strong> — Stage 2 sends OCR text to AWS Bedrock via the Converse API. The LLM extracts structured fields based on a per-service prompt template. Output is validated against the service's field schema.</div></div>
+  <div class="flow-step"><div class="num">5</div><div class="desc"><strong>Store</strong> — Extracted data saved to DynamoDB. Real-time status update pushed to client via AppSync WebSocket subscription.</div></div>
+  <div class="flow-step"><div class="num">6</div><div class="desc"><strong>Export</strong> — User triggers export. The exporter Lambda authenticates to Salesforce using stored (encrypted) OAuth tokens, maps fields per admin config, and creates/updates the Salesforce record via REST API.</div></div>
+  <div class="flow-step"><div class="num">7</div><div class="desc"><strong>Cleanup</strong> — If <code>deleteSourceAfterProcessing</code> is enabled, the source image is deleted from S3 after successful processing.</div></div>
+</div>
+
+<h4>Encryption at Each Stage</h4>
+<table class="avoid-break">
+  <tr><th>Stage</th><th>Encryption</th></tr>
+  <tr><td>Client → API</td><td>TLS 1.2+ (CloudFront enforced HTTPS)</td></tr>
+  <tr><td>S3 Storage</td><td>SSE-S3 (AES-256) + Block Public Access</td></tr>
+  <tr><td>DynamoDB Storage</td><td>AWS-managed encryption at rest</td></tr>
+  <tr><td>OAuth Tokens</td><td>AES-256-GCM application-level encryption</td></tr>
+  <tr><td>API → Textract/Bedrock</td><td>AWS SDK (TLS, IAM auth) — data stays within AWS</td></tr>
+  <tr><td>API → Salesforce</td><td>HTTPS (TLS 1.2+) via Salesforce REST API</td></tr>
+  <tr><td>Secrets Manager</td><td>KMS-managed encryption at rest</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════ 5. API ENDPOINTS ═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h2 id="api-endpoints">5. API Endpoints (Scan-Related)</h2>
+
+<p>The following endpoints are directly related to the document scanning and Salesforce export workflow. All tenant endpoints require JWT authentication (RS256). All admin endpoints require Cognito authorization.</p>
+
+<h3>Authentication Endpoints</h3>
+<table class="avoid-break">
+  <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+  <tr><td>POST</td><td><code>/tenant/auth/login</code></td><td>Initiate Salesforce OAuth 2.0 + PKCE login</td></tr>
+  <tr><td>GET</td><td><code>/tenant/auth/callback</code></td><td>Salesforce OAuth callback — exchange code for tokens</td></tr>
+  <tr><td>POST</td><td><code>/tenant/auth/exchange</code></td><td>One-time code exchange (mobile deep link, 60s TTL)</td></tr>
+  <tr><td>POST</td><td><code>/tenant/auth/refresh</code></td><td>Refresh JWT using refresh token</td></tr>
+  <tr><td>POST</td><td><code>/tenant/auth/logout</code></td><td>Invalidate session and revoke tokens</td></tr>
+  <tr><td>GET</td><td><code>/tenant/auth/token</code></td><td>Cookie-to-token exchange (AppSync auth)</td></tr>
+</table>
+
+<h3>Scanning &amp; Jobs Endpoints</h3>
+<table class="avoid-break">
+  <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+  <tr><td>POST</td><td><code>/tenant/jobs</code></td><td>Upload document for scanning (base64)</td></tr>
+  <tr><td>POST</td><td><code>/tenant/services/{serviceId}/upload-presigned</code></td><td>Get presigned S3 URL for large file upload</td></tr>
+  <tr><td>GET</td><td><code>/tenant/jobs</code></td><td>List scanned documents (paginated)</td></tr>
+  <tr><td>GET</td><td><code>/tenant/jobs/{jobId}</code></td><td>Get scan details and extracted data</td></tr>
+  <tr><td>PUT</td><td><code>/tenant/jobs/{jobId}</code></td><td>Update extracted field values</td></tr>
+  <tr><td>DELETE</td><td><code>/tenant/jobs/{jobId}</code></td><td>Delete scan and associated S3 files</td></tr>
+  <tr><td>POST</td><td><code>/tenant/jobs/{jobId}/retry</code></td><td>Retry failed scan processing</td></tr>
+</table>
+
+<h3>Salesforce Export Endpoints</h3>
+<table class="avoid-break">
+  <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+  <tr><td>POST</td><td><code>/tenant/ai/exporters/salesforce</code></td><td>Export scan data to Salesforce CRM</td></tr>
+  <tr><td>GET</td><td><code>/tenant/ai/exporters/history</code></td><td>View export history</td></tr>
+</table>
+
+<h3>Supporting Endpoints</h3>
+<table class="avoid-break">
+  <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+  <tr><td>GET</td><td><code>/tenant/quota</code></td><td>Check remaining scan quota (user + org)</td></tr>
+  <tr><td>GET</td><td><code>/tenant/services</code></td><td>List available scanning services for this tenant</td></tr>
+  <tr><td>GET</td><td><code>/tenant/campaigns</code></td><td>List Salesforce campaigns for scan attribution</td></tr>
+  <tr><td>GET</td><td><code>/tenant/notifications</code></td><td>Get scan notifications</td></tr>
+  <tr><td>GET</td><td><code>/tenant/system/health</code></td><td>Health check endpoint</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════ 6. AUTH & SECURITY ═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h2 id="auth-security">6. Authentication &amp; Security</h2>
+
+<h3>Authentication Methods</h3>
+<table class="avoid-break">
+  <tr><th>#</th><th>Method</th><th>Flow</th><th>Token Type</th></tr>
+  <tr><td>1</td><td>Salesforce OAuth 2.0 + PKCE</td><td>Authorization Code with S256 PKCE challenge</td><td>JWT (RS256)</td></tr>
+  <tr><td>2</td><td>Zoho OAuth 2.0</td><td>OAuth redirect with state validation</td><td>JWT (RS256)</td></tr>
+  <tr><td>3</td><td>AWS Cognito</td><td>USER_PASSWORD_AUTH flow</td><td>JWT (RS256)</td></tr>
+  <tr><td>4</td><td>API Key Exchange</td><td>X-API-Key + X-API-Secret headers</td><td>JWT (RS256, scoped)</td></tr>
+  <tr><td>5</td><td>Mobile Code Exchange</td><td>One-time code (60s TTL)</td><td>JWT + Refresh</td></tr>
+  <tr><td>6</td><td>Free Tier Signup</td><td>Cognito signup + 6-digit email verification</td><td>JWT (RS256)</td></tr>
+</table>
+
+<h3>JWT Configuration</h3>
+<table class="avoid-break">
+  <tr><th>Setting</th><th>Value</th></tr>
+  <tr><td>Algorithm</td><td>RS256 (asymmetric)</td></tr>
+  <tr><td>Issuer</td><td><code>api.xvio.ai</code></td></tr>
+  <tr><td>Audience</td><td><code>xvio-api</code></td></tr>
+  <tr><td>Default Expiry</td><td>15 minutes (per-tenant configurable: 5–1440 min)</td></tr>
+  <tr><td>Key Storage</td><td>AWS Secrets Manager (5-min Lambda cache)</td></tr>
+  <tr><td>Claims</td><td>sub, email, tenantId, userId, type, jti</td></tr>
+  <tr><td>Token Types</td><td><code>tenant_user</code>, <code>api_key</code></td></tr>
+</table>
+
+<h3>Session Management</h3>
+<table class="avoid-break">
+  <tr><th>Setting</th><th>Value</th></tr>
+  <tr><td>Refresh Token Format</td><td>UUID v4</td></tr>
+  <tr><td>Refresh Token Storage</td><td>SHA-256 hash in DynamoDB (plain token never stored)</td></tr>
+  <tr><td>Session Duration</td><td>180 days default (per-tenant configurable: 1–365 days)</td></tr>
+  <tr><td>Cookie: httpOnly</td><td>true (prevents XSS token theft)</td></tr>
+  <tr><td>Cookie: Secure</td><td>true (HTTPS only)</td></tr>
+  <tr><td>Cookie: SameSite</td><td>None (cross-domain with Secure flag)</td></tr>
+  <tr><td>Token Revocation</td><td>DynamoDB blacklist with 5-min cache, TTL matching token expiry</td></tr>
+</table>
+
+<h3>OAuth Security Controls</h3>
+<table class="avoid-break">
+  <tr><th>Control</th><th>Implementation</th></tr>
+  <tr><td>PKCE</td><td>S256 challenge. Code verifier stored in DynamoDB with 10-min TTL. Deleted after exchange. Cannot be replayed.</td></tr>
+  <tr><td>CSRF Protection</td><td><code>state</code> parameter: 32 bytes from <code>crypto.getRandomValues()</code>, stored in sessionStorage, verified on callback.</td></tr>
+  <tr><td>Org ID Validation</td><td>After callback, <code>organization_id</code> from Salesforce userinfo compared to tenant config. Mismatch = ACCESS DENIED + audit log.</td></tr>
+  <tr><td>One-Time Codes</td><td>Mobile auth uses 60-second one-time codes to prevent token leakage in URLs (SEC-015).</td></tr>
+  <tr><td>Redirect URI Allowlist</td><td>Zod validation: only <code>*.xvio.ai</code> (HTTPS) and <code>xvio://</code> (mobile deep link).</td></tr>
+  <tr><td>Rate Limiting</td><td>Login: 10/min, Callback: 20/min, Refresh: 30/min, Signup: 5/min — all per IP.</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════ 7. DATA SECURITY ═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h2 id="data-security">7. Data Security &amp; Encryption</h2>
+
+<table class="avoid-break">
+  <tr><th>Layer</th><th>Method</th><th>Details</th></tr>
+  <tr><td>In Transit</td><td>TLS 1.2+</td><td>CloudFront enforces HTTPS. API Gateway HTTPS-only origin policy.</td></tr>
+  <tr><td>DynamoDB at Rest</td><td>AWS-managed encryption</td><td>Enabled on all tables across all environments.</td></tr>
+  <tr><td>S3 at Rest</td><td>SSE-S3 (AES-256)</td><td><code>blockPublicAccess: BLOCK_ALL</code> on all buckets.</td></tr>
+  <tr><td>OAuth Tokens</td><td>AES-256-GCM</td><td>Application-level encryption. Format: <code>{iv:authTag:ciphertext}</code>. 16-byte random IV per encryption. Key from Secrets Manager.</td></tr>
+  <tr><td>Refresh Tokens</td><td>SHA-256 hash</td><td>Only the hash is stored. Plain token returned once at creation.</td></tr>
+  <tr><td>API Keys</td><td>SHA-256 hash + constant-time compare</td><td>Format: <code>exon_ak_{32 hex chars}</code>. First 12 chars visible for UI display only.</td></tr>
+  <tr><td>Secrets</td><td>AWS Secrets Manager (KMS)</td><td>JWT signing key, Salesforce creds, integration secrets. 5-min Lambda cache.</td></tr>
+</table>
+
+<h3>Data Handling Policies</h3>
+<ul>
+  <li><strong>No PII in logs</strong> — Structured JSON logging with tenantId, userId, action, correlationId. No emails, names, or document content logged.</li>
+  <li><strong>Source file deletion</strong> — Configurable <code>deleteSourceAfterProcessing</code> flag per service. Diagnostic log retention: 7 days (dev), 365 days (prod).</li>
+  <li><strong>API response masking</strong> — Salesforce credentials masked in API responses (e.g., <code>3MVG9...***</code>). Tokens never returned in list/get endpoints.</li>
+  <li><strong>Logout cleanup</strong> — <code>clearAllData()</code> removes auth tokens, IndexedDB, localStorage, and sync cache from client.</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════ 8. TENANT ISOLATION ═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h2 id="tenant-isolation">8. Multi-Tenant Isolation</h2>
+
+<table class="avoid-break">
+  <tr><th>Layer</th><th>Isolation Mechanism</th></tr>
+  <tr><td>DynamoDB</td><td>Partition key always includes <code>TENANT#{tenantId}#APP#{appId}</code>. Cross-tenant queries are structurally impossible — not enforced by application logic, but by data architecture.</td></tr>
+  <tr><td>S3</td><td>Key prefix includes <code>{tenantId}/</code>. Access scoped per request.</td></tr>
+  <tr><td>JWT Claims</td><td><code>tenantId</code> extracted from JWT token, never from request parameters. Cannot be spoofed without the signing key.</td></tr>
+  <tr><td>Secrets Manager</td><td>Per-tenant credential paths: <code>/xvio/{stage}/tenant/{tenantId}/sf-oauth</code></td></tr>
+  <tr><td>Multi-App</td><td><code>X-App-ID</code> header required. PK includes <code>APP#{appId}</code>.</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════ 9. INPUT VALIDATION ═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h2 id="input-validation">9. Input Validation &amp; API Security</h2>
+
+<h3>Input Validation</h3>
+<table class="avoid-break">
+  <tr><th>Control</th><th>Implementation</th></tr>
+  <tr><td>Schema Validation</td><td>Zod schema validation on all Lambda handler inputs before processing.</td></tr>
+  <tr><td>XSS Prevention</td><td><code>sanitizeText()</code> strips HTML tags, javascript/data/vbscript URLs, and event handlers.</td></tr>
+  <tr><td>SQL Injection</td><td>DynamoDB (NoSQL) with parameterized ExpressionAttributeNames/Values. No raw string interpolation.</td></tr>
+  <tr><td>Open Redirect</td><td><code>redirectUri</code> allowlisted to <code>*.xvio.ai</code>, <code>localhost</code>, <code>xvio://</code> only.</td></tr>
+  <tr><td>File Upload (Size)</td><td>Base64: 20MB limit. Presigned: 50MB limit. Enforced at Lambda level.</td></tr>
+  <tr><td>File Upload (Type)</td><td>MIME detection + extension check: JPEG, PNG, PDF, TIFF only.</td></tr>
+</table>
+
+<h3>API Protection</h3>
+<table class="avoid-break">
+  <tr><th>Control</th><th>Implementation</th></tr>
+  <tr><td>AWS WAF v2</td><td>OWASP Common Rules, Known Bad Inputs, SQLi Rules, IP Reputation. Rate: 2000 req/5min (dev), 3000 req/5min (prod) per IP.</td></tr>
+  <tr><td>Application Rate Limiting</td><td>DynamoDB-based per-IP counters with TTL cleanup on all auth endpoints.</td></tr>
+  <tr><td>API Gateway Throttling</td><td>1000 req/min, 500 burst.</td></tr>
+  <tr><td>CORS</td><td>Explicit origin allowlist (no wildcard with credentials). Origins: <code>*.xvio.ai</code>, approved localhost ports.</td></tr>
+  <tr><td>Admin Routes</td><td>Cognito User Pool authorizer on all <code>/admin/*</code> endpoints.</td></tr>
+  <tr><td>Tenant Routes</td><td>JWT RS256 verification via <code>authorizeTenantRequest()</code> on all <code>/tenant/*</code> endpoints.</td></tr>
+  <tr><td>Security Headers</td><td>CloudFront Function: HSTS, X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy.</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════ 10. INFRASTRUCTURE ═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h2 id="infrastructure">10. Infrastructure Security</h2>
+
+<table class="avoid-break">
+  <tr><th>Control</th><th>Status</th><th>Details</th></tr>
+  <tr><td>IAM Least Privilege</td><td><span class="tag tag-green">Done</span></td><td>Lambda roles scoped to specific table/bucket ARNs.</td></tr>
+  <tr><td>DynamoDB PITR</td><td><span class="tag tag-green">Done</span></td><td>Point-in-time recovery enabled on all tables, all environments. 1-hour RPO.</td></tr>
+  <tr><td>S3 Block Public Access</td><td><span class="tag tag-green">Done</span></td><td><code>BLOCK_ALL</code> on all buckets. CDK default enabled.</td></tr>
+  <tr><td>CloudTrail</td><td><span class="tag tag-green">Done</span></td><td>API call auditing for all AWS operations.</td></tr>
+  <tr><td>CloudWatch Monitoring</td><td><span class="tag tag-green">Done</span></td><td>Alarms: Lambda errors (>0/5min), API 5xx (>5/5min), DDB throttles (>0/5min), SQS DLQ (>0).</td></tr>
+  <tr><td>SQS Dead Letter Queue</td><td><span class="tag tag-green">Done</span></td><td>Failed messages routed to DLQ after 3 retries. Alarm on DLQ depth.</td></tr>
+  <tr><td>VPC</td><td><span class="tag tag-blue">N/A</span></td><td>Serverless architecture. All AWS services accessed via SDK with IAM auth. Edge protection via CloudFront + WAF.</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════ 11. MOBILE ═══════════════════════════════════════════ -->
+<h2 id="mobile">11. Mobile Application Security</h2>
+
+<table class="avoid-break">
+  <tr><th>Control</th><th>Implementation</th></tr>
+  <tr><td>Token Storage</td><td>Capacitor Preferences with OS-level encryption (iOS Keychain / Android EncryptedSharedPreferences)</td></tr>
+  <tr><td>OAuth Browser</td><td>iOS: ASWebAuthenticationSession. Android: Chrome Custom Tabs. Prevents redirect hijacking.</td></tr>
+  <tr><td>Deep Link Validation</td><td><code>xvio://</code> scheme validated. One-time 60-second exchange codes for mobile deep links.</td></tr>
+  <tr><td>HTTPS Only</td><td>iOS ATS enforced. Android Network Security Config blocks cleartext traffic.</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════ 12. COMPONENTS ═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h2 id="components">12. Components &amp; Platforms</h2>
+
+<table class="avoid-break">
+  <tr><th>Component</th><th>Technology</th><th>Distribution</th></tr>
+  <tr><td>Backend API</td><td>AWS Lambda (Node.js 20, TypeScript)</td><td>API Gateway REST</td></tr>
+  <tr><td>Web App</td><td>SvelteKit 2.0 (Progressive Web App)</td><td><code>scan.xvio.ai</code></td></tr>
+  <tr><td>iOS App</td><td>SvelteKit + Capacitor 6.2</td><td>App Store</td></tr>
+  <tr><td>Android App</td><td>SvelteKit + Capacitor 6.0</td><td>Google Play</td></tr>
+  <tr><td>Admin Console</td><td>SvelteKit 2.0</td><td><code>console.xvio.ai</code></td></tr>
+  <tr><td>Real-time</td><td>AppSync GraphQL (WebSocket)</td><td>Live scan status updates</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════ CONTACT PAGE ═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<div class="contact-page">
+  <h2>Get in Touch</h2>
+  <p class="contact-desc">
+    For questions about this document, security inquiries, integration support, or to schedule a technical walkthrough, please reach out to our team.
+  </p>
+  <div class="contact-card">
+    <div class="contact-label">Contact Support</div>
+    <a href="mailto:support@xvio.ai" class="contact-email">support@xvio.ai</a>
+  </div>
+  <div class="contact-meta">
+    <strong>ExonPro Innovations LLP</strong><br>
+    <a href="https://xvio.ai">xvio.ai</a><br><br>
+    xVio Scan &mdash; Technical Solution Overview<br>
+    March 2026
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ SCREEN FOOTER ═══════════════════════════════════════════ -->
+<div class="footer-screen">
+  <p><strong>xVio Scan</strong> by ExonPro Innovations LLP &bull; March 2026</p>
+  <p>support@xvio.ai</p>
+</div>
+
+</body>
+</html>

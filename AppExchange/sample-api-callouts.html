@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>xVio Scan — Sample API Callouts</title>
+  <style>
+    @page { size: A4; margin: 20mm 18mm 24mm 18mm; }
+    @media print {
+      body { font-size: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .page-break { page-break-before: always; }
+      .avoid-break { page-break-inside: avoid; }
+      .print-footer {
+        position: fixed; bottom: 0; left: 0; right: 0; height: 14mm;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 9px; color: #94A3B8; font-family: 'Segoe UI', sans-serif;
+        border-top: 1px solid #E2E8F0; padding-top: 4px;
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      color: #1a1a2e; line-height: 1.6; padding: 40px; max-width: 900px; margin: 0 auto; background: #fff;
+    }
+    .print-footer { display: none; }
+    .title-page {
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      min-height: 85vh; text-align: center; padding: 60px 40px;
+    }
+    .title-page .logo-mark {
+      width: 80px; height: 80px; border-radius: 20px;
+      background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+      display: flex; align-items: center; justify-content: center; margin-bottom: 32px;
+      color: white; font-size: 32px; font-weight: 800; letter-spacing: -1px;
+    }
+    .title-page h1 { font-size: 38px; color: #4F46E5; margin-bottom: 8px; }
+    .title-page .subtitle { font-size: 20px; color: #64748B; margin-bottom: 40px; }
+    .title-page .divider { width: 60px; height: 3px; background: #4F46E5; border-radius: 2px; margin-bottom: 32px; }
+    .title-page .desc { max-width: 560px; font-size: 14px; color: #475569; line-height: 1.8; margin-bottom: 48px; }
+    .title-page .meta { font-size: 13px; color: #94A3B8; line-height: 2; }
+    .title-page .meta strong { color: #64748B; }
+
+    h2 { font-size: 20px; color: #4F46E5; margin: 32px 0 12px; padding-bottom: 6px; border-bottom: 2px solid #E2E8F0; }
+    h3 { font-size: 15px; color: #1E293B; margin: 20px 0 8px; }
+    h4 { font-size: 13px; color: #475569; margin: 16px 0 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    p { margin: 6px 0; font-size: 13px; }
+
+    .endpoint { margin: 16px 0 24px; }
+    .endpoint-title { font-size: 14px; font-weight: 700; color: #1E293B; margin-bottom: 4px; }
+    .endpoint-desc { font-size: 12px; color: #64748B; margin-bottom: 10px; }
+
+    .http-block {
+      background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px;
+      padding: 12px 14px; margin: 8px 0; font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 11px; line-height: 1.5; white-space: pre-wrap; word-break: break-all;
+      overflow-wrap: break-word;
+    }
+    .http-block .method { color: #4F46E5; font-weight: 700; }
+    .http-block .header-name { color: #0369A1; }
+    .http-block .status { color: #059669; font-weight: 700; }
+    .http-block .masked { color: #DC2626; font-style: italic; }
+
+    .label { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; margin-right: 6px; }
+    .label-req { background: #DBEAFE; color: #1E40AF; }
+    .label-res { background: #D1FAE5; color: #065F46; }
+    .label-note { background: #FEF3C7; color: #92400E; }
+
+    .note { background: #FFFBEB; border-left: 3px solid #F59E0B; padding: 8px 12px; margin: 8px 0; font-size: 12px; color: #92400E; border-radius: 0 6px 6px 0; }
+
+    table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 12px; }
+    th { background: #F1F5F9; text-align: left; padding: 7px 10px; font-weight: 600; color: #475569; border: 1px solid #E2E8F0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+    td { padding: 6px 10px; border: 1px solid #E2E8F0; vertical-align: top; }
+    tr:nth-child(even) td { background: #FAFBFC; }
+
+    code { background: #F1F5F9; padding: 1px 5px; border-radius: 3px; font-size: 11px; font-family: 'SF Mono', 'Fira Code', monospace; }
+
+    .section-divider { border: none; border-top: 2px solid #E2E8F0; margin: 24px 0; }
+
+    .contact-page {
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      min-height: 70vh; text-align: center; padding: 80px 40px;
+    }
+    .contact-page h2 { border-bottom: none; margin-bottom: 20px; font-size: 26px; }
+    .contact-page .contact-desc { font-size: 15px; color: #475569; max-width: 480px; line-height: 1.8; margin-bottom: 40px; }
+    .contact-card { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 32px 48px; }
+    .contact-card .contact-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #94A3B8; margin-bottom: 8px; font-weight: 600; }
+    .contact-card .contact-email { font-size: 22px; color: #4F46E5; font-weight: 600; text-decoration: none; }
+    .contact-meta { margin-top: 40px; font-size: 12px; color: #94A3B8; line-height: 2; }
+  </style>
+</head>
+<body>
+
+<div class="print-footer">xVio Scan by ExonPro Innovations LLP &bull; March 2026</div>
+
+<!-- TITLE PAGE -->
+<div class="title-page">
+  <div class="logo-mark">xV</div>
+  <h1>xVio Scan</h1>
+  <div class="subtitle">Sample API Callouts</div>
+  <div class="divider"></div>
+  <p class="desc">
+    Complete HTTP request and response examples for all xVio Scan API endpoints, including authentication headers, request bodies, and response formats. All sensitive values are masked with descriptive placeholders.
+  </p>
+  <div class="meta">
+    <strong>Prepared by</strong><br>ExonPro Innovations LLP<br><br>
+    <strong>Base URL</strong><br><code>https://api.xvio.ai/v1</code><br><br>
+    <strong>Date</strong><br>March 2026
+  </div>
+</div>
+
+<!-- COMMON HEADERS -->
+<div class="page-break"></div>
+<h2>Common Headers</h2>
+<p>All requests use HTTPS (TLS 1.2+). All responses are JSON (<code>Content-Type: application/json</code>).</p>
+
+<table class="avoid-break">
+  <tr><th>Header</th><th>Value</th><th>Description</th></tr>
+  <tr><td><code>Authorization</code></td><td><code>Bearer {MASKED_JWT_TOKEN}</code></td><td>RS256 JWT issued by xVio Scan (required on authenticated endpoints)</td></tr>
+  <tr><td><code>X-App-ID</code></td><td><code>xvio-scan</code></td><td>Application identifier (required on tenant endpoints)</td></tr>
+  <tr><td><code>Content-Type</code></td><td><code>application/json</code></td><td>Request body format</td></tr>
+  <tr><td><code>Origin</code></td><td><code>https://scan.xvio.ai</code></td><td>CORS origin (validated against allowlist)</td></tr>
+</table>
+
+<h3>Error Response Format (all endpoints)</h3>
+<div class="http-block avoid-break"><span class="status">HTTP/1.1 {statusCode}</span>
+<span class="header-name">Content-Type:</span> application/json
+
+{
+  "error": "ERROR_CODE",
+  "message": "Human-readable description",
+  "errorCode": "ERROR_CODE"
+}
+</div>
+<p>Common error codes: <code>UNAUTHORIZED</code>, <code>FORBIDDEN</code>, <code>NOT_FOUND</code>, <code>VALIDATION_ERROR</code>, <code>RATE_LIMITED</code>, <code>QUOTA_EXCEEDED</code></p>
+
+<!-- 1. AUTHENTICATION -->
+<div class="page-break"></div>
+<h2>1. Authentication Endpoints</h2>
+
+<div class="endpoint avoid-break">
+  <div class="endpoint-title">1a. POST /tenant/auth/login</div>
+  <div class="endpoint-desc">Initiates Salesforce OAuth 2.0 + PKCE login flow. Returns available auth methods and Salesforce authorization URL.</div>
+
+  <span class="label label-req">REQUEST</span>
+  <div class="http-block"><span class="method">POST</span> /v1/tenant/auth/login HTTP/1.1
+<span class="header-name">Host:</span> api.xvio.ai
+<span class="header-name">Content-Type:</span> application/json
+<span class="header-name">X-App-ID:</span> xvio-scan
+<span class="header-name">Origin:</span> https://scan.xvio.ai
+
+{
+  "customId": "free",
+  "redirectUri": "https://scan.xvio.ai/auth/callback"
+}</div>
+
+  <span class="label label-res">RESPONSE 200 OK</span>
+  <div class="http-block"><span class="status">HTTP/1.1 200 OK</span>
+<span class="header-name">Content-Type:</span> application/json
+<span class="header-name">Access-Control-Allow-Origin:</span> https://scan.xvio.ai
+<span class="header-name">Access-Control-Allow-Credentials:</span> true
+
+{
+  "authMethods": {
+    "salesforce": {
+      "authUrl": "https://login.salesforce.com/services/oauth2/authorize?response_type=code&amp;client_id=<span class="masked">{SF_CLIENT_ID}</span>&amp;redirect_uri=...&amp;state=<span class="masked">{CSRF_STATE}</span>&amp;code_challenge=<span class="masked">{PKCE_CHALLENGE}</span>&amp;code_challenge_method=S256&amp;scope=api+refresh_token",
+      "state": "<span class="masked">{CSRF_STATE}</span>"
+    },
+    "cognito": { "enabled": true }
+  },
+  "tenant": {
+    "id": "<span class="masked">{TENANT_ID}</span>",
+    "name": "xVio Free",
+    "customId": "free"
+  }
+}</div>
+  <div class="note">Rate limit: 10 requests per minute per IP.</div>
+</div>
+
+<div class="endpoint avoid-break">
+  <div class="endpoint-title">1b. GET /tenant/auth/callback</div>
+  <div class="endpoint-desc">Salesforce OAuth callback. Exchanges authorization code for tokens. Redirects to web app or mobile deep link.</div>
+
+  <span class="label label-req">REQUEST</span>
+  <div class="http-block"><span class="method">GET</span> /v1/tenant/auth/callback?code=<span class="masked">{SF_AUTH_CODE}</span>&amp;state=<span class="masked">{CSRF_STATE}</span> HTTP/1.1
+<span class="header-name">Host:</span> api.xvio.ai</div>
+
+  <span class="label label-res">RESPONSE 302 (Web)</span>
+  <div class="http-block"><span class="status">HTTP/1.1 302 Found</span>
+<span class="header-name">Location:</span> https://scan.xvio.ai/auth/callback?authSuccess=true
+<span class="header-name">Set-Cookie:</span> token=<span class="masked">{MASKED_JWT_TOKEN}</span>; HttpOnly; Secure; SameSite=None; Domain=.xvio.ai; Path=/; Max-Age=900
+<span class="header-name">Set-Cookie:</span> tenantId=<span class="masked">{TENANT_ID}</span>; Secure; SameSite=None; Domain=.xvio.ai; Path=/; Max-Age=2592000</div>
+
+  <span class="label label-res">RESPONSE 302 (Mobile)</span>
+  <div class="http-block"><span class="status">HTTP/1.1 302 Found</span>
+<span class="header-name">Location:</span> xvio://oauth/callback?authSuccess=true&amp;code=<span class="masked">{ONE_TIME_CODE}</span>&amp;tenantId=<span class="masked">{TENANT_ID}</span></div>
+  <div class="note">Mobile redirects use a one-time auth code (60s TTL) instead of tokens in the URL.</div>
+</div>
+
+<div class="page-break"></div>
+
+<div class="endpoint avoid-break">
+  <div class="endpoint-title">1c. POST /tenant/auth/exchange</div>
+  <div class="endpoint-desc">Exchanges one-time auth code for JWT tokens. Used by mobile apps after deep link callback.</div>
+
+  <span class="label label-req">REQUEST</span>
+  <div class="http-block"><span class="method">POST</span> /v1/tenant/auth/exchange HTTP/1.1
+<span class="header-name">Host:</span> api.xvio.ai
+<span class="header-name">Content-Type:</span> application/json
+
+{
+  "code": "<span class="masked">{ONE_TIME_AUTH_CODE}</span>"
+}</div>
+
+  <span class="label label-res">RESPONSE 200 OK</span>
+  <div class="http-block"><span class="status">HTTP/1.1 200 OK</span>
+<span class="header-name">Content-Type:</span> application/json
+
+{
+  "accessToken": "<span class="masked">{MASKED_JWT_TOKEN}</span>",
+  "token": "<span class="masked">{MASKED_JWT_TOKEN}</span>",
+  "refreshToken": "<span class="masked">{REFRESH_TOKEN}</span>",
+  "expiresIn": 900,
+  "tenantId": "<span class="masked">{TENANT_ID}</span>",
+  "user": {
+    "id": "<span class="masked">{USER_ID}</span>",
+    "email": "<span class="masked">{USER_EMAIL}</span>",
+    "name": "<span class="masked">{USER_NAME}</span>"
+  }
+}</div>
+  <div class="note">The one-time code expires after 60 seconds and is deleted after first use.</div>
+</div>
+
+<div class="endpoint avoid-break">
+  <div class="endpoint-title">1d. POST /tenant/auth/refresh</div>
+  <div class="endpoint-desc">Refreshes an expired JWT using the refresh token.</div>
+
+  <span class="label label-req">REQUEST</span>
+  <div class="http-block"><span class="method">POST</span> /v1/tenant/auth/refresh HTTP/1.1
+<span class="header-name">Host:</span> api.xvio.ai
+<span class="header-name">Content-Type:</span> application/json
+
+{
+  "refreshToken": "<span class="masked">{REFRESH_TOKEN}</span>",
+  "tenantId": "<span class="masked">{TENANT_ID}</span>"
+}</div>
+
+  <span class="label label-res">RESPONSE 200 OK</span>
+  <div class="http-block"><span class="status">HTTP/1.1 200 OK</span>
+<span class="header-name">Content-Type:</span> application/json
+<span class="header-name">Set-Cookie:</span> token=<span class="masked">{MASKED_JWT_TOKEN}</span>; HttpOnly; Secure; SameSite=None; Domain=.xvio.ai; Path=/; Max-Age=900
+
+{
+  "accessToken": "<span class="masked">{MASKED_JWT_TOKEN}</span>",
+  "expiresIn": 900
+}</div>
+  <div class="note">Rate limit: 30 requests per minute per IP.</div>
+</div>
+
+<div class="endpoint avoid-break">
+  <div class="endpoint-title">1e. POST /tenant/auth/logout</div>
+  <div class="endpoint-desc">Invalidates session, revokes JWT and optionally the refresh token.</div>
+
+  <span class="label label-req">REQUEST</span>
+  <div class="http-block"><span class="method">POST</span> /v1/tenant/auth/logout HTTP/1.1
+<span class="header-name">Host:</span> api.xvio.ai
+<span class="header-name">Authorization:</span> Bearer <span class="masked">{MASKED_JWT_TOKEN}</span>
+<span class="header-name">Content-Type:</span> application/json
+
+{
+  "refreshToken": "<span class="masked">{REFRESH_TOKEN}</span>"
+}</div>
+
+  <span class="label label-res">RESPONSE 200 OK</span>
+  <div class="http-block"><span class="status">HTTP/1.1 200 OK</span>
+<span class="header-name">Content-Type:</span> application/json
+<span class="header-name">Set-Cookie:</span> token=; HttpOnly; Secure; SameSite=None; Domain=.xvio.ai; Path=/; Max-Age=0
+<span class="header-name">Set-Cookie:</span> tenantId=; Secure; SameSite=None; Domain=.xvio.ai; Path=/; Max-Age=0
+
+{
+  "success": true,
+  "message": "Logged out successfully"
+}</div>
+</div>
+
+<!-- 2. SCANNING -->
+<div class="page-break"></div>
+<h2>2. Scanning and Jobs Endpoints</h2>
+
+<div class="endpoint avoid-break">
+  <div class="endpoint-title">2a. POST /tenant/jobs</div>
+  <div class="endpoint-desc">Upload a document for AI scanning. Accepts base64-encoded file.</div>
+
+  <span class="label label-req">REQUEST</span>
+  <div class="http-block"><span class="method">POST</span> /v1/tenant/jobs HTTP/1.1
+<span class="header-name">Host:</span> api.xvio.ai
+<span class="header-name">Authorization:</span> Bearer <span class="masked">{MASKED_JWT_TOKEN}</span>
+<span class="header-name">Content-Type:</span> application/json
+<span class="header-name">X-App-ID:</span> xvio-scan
+
+{
+  "tenantId": "<span class="masked">{TENANT_ID}</span>",
+  "userId": "<span class="masked">{USER_ID}</span>",
+  "serviceId": "<span class="masked">{SERVICE_ID}</span>",
+  "file": {
+    "name": "business-card.jpg",
+    "type": "image/jpeg",
+    "data": "<span class="masked">{BASE64_FILE_DATA}</span>"
+  }
+}</div>
+
+  <span class="label label-res">RESPONSE 201 Created</span>
+  <div class="http-block"><span class="status">HTTP/1.1 201 Created</span>
+<span class="header-name">Content-Type:</span> application/json
+
+{
+  "jobId": "<span class="masked">{JOB_ID}</span>",
+  "status": "pending",
+  "progress": 0,
+  "serviceId": "<span class="masked">{SERVICE_ID}</span>",
+  "serviceName": "Business Card Scanner",
+  "createdAt": "2026-03-09T10:00:00.000Z"
+}</div>
+  <div class="note">File size limit: 20MB for base64. For larger files (up to 50MB), use the presigned upload endpoint.</div>
+</div>
+
+<div class="endpoint avoid-break">
+  <div class="endpoint-title">2b. POST /tenant/services/{serviceId}/upload-presigned</div>
+  <div class="endpoint-desc">Get a presigned S3 URL for large file uploads.</div>
+
+  <span class="label label-req">REQUEST</span>
+  <div class="http-block"><span class="method">POST</span> /v1/tenant/services/<span class="masked">{SERVICE_ID}</span>/upload-presigned HTTP/1.1
+<span class="header-name">Host:</span> api.xvio.ai
+<span class="header-name">Authorization:</span> Bearer <span class="masked">{MASKED_JWT_TOKEN}</span>
+<span class="header-name">Content-Type:</span> application/json
+<span class="header-name">X-App-ID:</span> xvio-scan
+
+{
+  "tenantId": "<span class="masked">{TENANT_ID}</span>",
+  "userId": "<span class="masked">{USER_ID}</span>",
+  "filename": "invoice-scan.pdf",
+  "contentType": "application/pdf"
+}</div>
+
+  <span class="label label-res">RESPONSE 200 OK</span>
+  <div class="http-block"><span class="status">HTTP/1.1 200 OK</span>
+<span class="header-name">Content-Type:</span> application/json
+
+{
+  "uploadUrl": "<span class="masked">{PRESIGNED_S3_URL}</span>",
+  "jobId": "<span class="masked">{JOB_ID}</span>",
+  "expiresIn": 300
+}</div>
+</div>
+
+<div class="page-break"></div>
+
+<div class="endpoint avoid-break">
+  <div class="endpoint-title">2c. GET /tenant/jobs</div>
+  <div class="endpoint-desc">List scanned documents with pagination and delta sync support.</div>
+
+  <span class="label label-req">REQUEST</span>
+  <div class="http-block"><span class="method">GET</span> /v1/tenant/jobs?tenantId=<span class="masked">{TENANT_ID}</span>&amp;userId=<span class="masked">{USER_ID}</span>&amp;limit=50 HTTP/1.1
+<span class="header-name">Host:</span> api.xvio.ai
+<span class="header-name">Authorization:</span> Bearer <span class="masked">{MASKED_JWT_TOKEN}</span>
+<span class="header-name">X-App-ID:</span> xvio-scan</div>
+
+  <span class="label label-res">RESPONSE 200 OK</span>
+  <div class="http-block"><span class="status">HTTP/1.1 200 OK</span>
+<span class="header-name">Content-Type:</span> application/json
+
+{
+  "jobs": [
+    {
+      "jobId": "<span class="masked">{JOB_ID}</span>",
+      "tenantId": "<span class="masked">{TENANT_ID}</span>",
+      "appId": "xvio-scan",
+      "userId": "<span class="masked">{USER_ID}</span>",
+      "type": "scan",
+      "status": "completed",
+      "progress": 100,
+      "serviceId": "<span class="masked">{SERVICE_ID}</span>",
+      "serviceName": "Business Card Scanner",
+      "summaryData": {
+        "firstName": "Jane",
+        "lastName": "Smith",
+        "email": "jane@example.com",
+        "phone": "+91 XXXXX XXXXX",
+        "Company": "Example Corp",
+        "jobTitle": "Director of Engineering"
+      },
+      "metadata": { "filename": "business-card.jpg", "fileSize": 245678 },
+      "createdAt": "2026-03-09T10:00:00.000Z",
+      "updatedAt": "2026-03-09T10:00:45.000Z"
+    }
+  ],
+  "total": 1,
+  "nextToken": null
+}</div>
+  <div class="note">Delta sync: Add <code>updatedAfter=2026-03-09T09:00:00.000Z</code> to fetch only changes since last sync.</div>
+</div>
+
+<div class="endpoint avoid-break">
+  <div class="endpoint-title">2d. GET /tenant/jobs/{jobId}</div>
+  <div class="endpoint-desc">Get full scan details including all extracted data.</div>
+
+  <span class="label label-req">REQUEST</span>
+  <div class="http-block"><span class="method">GET</span> /v1/tenant/jobs/<span class="masked">{JOB_ID}</span>?tenantId=<span class="masked">{TENANT_ID}</span>&amp;userId=<span class="masked">{USER_ID}</span> HTTP/1.1
+<span class="header-name">Host:</span> api.xvio.ai
+<span class="header-name">Authorization:</span> Bearer <span class="masked">{MASKED_JWT_TOKEN}</span>
+<span class="header-name">X-App-ID:</span> xvio-scan</div>
+
+  <span class="label label-res">RESPONSE 200 OK</span>
+  <div class="http-block"><span class="status">HTTP/1.1 200 OK</span>
+<span class="header-name">Content-Type:</span> application/json
+
+{
+  "jobId": "<span class="masked">{JOB_ID}</span>",
+  "tenantId": "<span class="masked">{TENANT_ID}</span>",
+  "appId": "xvio-scan",
+  "userId": "<span class="masked">{USER_ID}</span>",
+  "status": "completed",
+  "progress": 100,
+  "serviceId": "<span class="masked">{SERVICE_ID}</span>",
+  "serviceName": "Business Card Scanner",
+  "summaryData": {
+    "firstName": "Jane", "lastName": "Smith",
+    "email": "jane@example.com", "Company": "Example Corp"
+  },
+  "extractedData": {
+    "firstName": "Jane", "lastName": "Smith",
+    "email": "jane@example.com", "phone": "+91 XXXXX XXXXX",
+    "Company": "Example Corp", "jobTitle": "Director of Engineering",
+    "city": "Mumbai", "website": "www.example.com"
+  },
+  "metadata": { "filename": "business-card.jpg", "fileSize": 245678 },
+  "createdAt": "2026-03-09T10:00:00.000Z",
+  "updatedAt": "2026-03-09T10:00:45.000Z",
+  "completedAt": "2026-03-09T10:00:45.000Z"
+}</div>
+</div>
+
+<div class="page-break"></div>
+
+<div class="endpoint avoid-break">
+  <div class="endpoint-title">2e. PUT /tenant/jobs/{jobId}</div>
+  <div class="endpoint-desc">Update extracted field values (manual correction before export).</div>
+
+  <span class="label label-req">REQUEST</span>
+  <div class="http-block"><span class="method">PUT</span> /v1/tenant/jobs/<span class="masked">{JOB_ID}</span> HTTP/1.1
+<span class="header-name">Host:</span> api.xvio.ai
+<span class="header-name">Authorization:</span> Bearer <span class="masked">{MASKED_JWT_TOKEN}</span>
+<span class="header-name">Content-Type:</span> application/json
+<span class="header-name">X-App-ID:</span> xvio-scan
+
+{
+  "tenantId": "<span class="masked">{TENANT_ID}</span>",
+  "userId": "<span class="masked">{USER_ID}</span>",
+  "extractedData": {
+    "firstName": "Jane", "lastName": "Smith-Johnson",
+    "email": "jane.smith@example.com", "Company": "Example Corp Pvt Ltd"
+  }
+}</div>
+
+  <span class="label label-res">RESPONSE 200 OK</span>
+  <div class="http-block"><span class="status">HTTP/1.1 200 OK</span>
+<span class="header-name">Content-Type:</span> application/json
+
+{
+  "jobId": "<span class="masked">{JOB_ID}</span>",
+  "status": "completed",
+  "updatedAt": "2026-03-09T10:05:00.000Z"
+}</div>
+</div>
+
+<div class="endpoint avoid-break">
+  <div class="endpoint-title">2f. DELETE /tenant/jobs/{jobId}</div>
+  <div class="endpoint-desc">Delete a scan and its associated S3 files.</div>
+
+  <span class="label label-req">REQUEST</span>
+  <div class="http-block"><span class="method">DELETE</span> /v1/tenant/jobs/<span class="masked">{JOB_ID}</span>?tenantId=<span class="masked">{TENANT_ID}</span>&amp;userId=<span class="masked">{USER_ID}</span> HTTP/1.1
+<span class="header-name">Host:</span> api.xvio.ai
+<span class="header-name">Authorization:</span> Bearer <span class="masked">{MASKED_JWT_TOKEN}</span>
+<span class="header-name">X-App-ID:</span> xvio-scan</div>
+
+  <span class="label label-res">RESPONSE 200 OK</span>
+  <div class="http-block"><span class="status">HTTP/1.1 200 OK</span>
+<span class="header-name">Content-Type:</span> application/json
+
+{
+  "success": true,
+  "message": "Job deleted successfully"
+}</div>
+</div>
+
+<!-- 3. EXPORT -->
+<div class="page-break"></div>
+<h2>3. Salesforce Export Endpoints</h2>
+
+<div class="endpoint avoid-break">
+  <div class="endpoint-title">3a. POST /tenant/ai/exporters/salesforce</div>
+  <div class="endpoint-desc">Export scan data to Salesforce CRM as a Lead, Contact, Case, or custom sObject.</div>
+
+  <span class="label label-req">REQUEST</span>
+  <div class="http-block"><span class="method">POST</span> /v1/tenant/ai/exporters/salesforce HTTP/1.1
+<span class="header-name">Host:</span> api.xvio.ai
+<span class="header-name">Authorization:</span> Bearer <span class="masked">{MASKED_JWT_TOKEN}</span>
+<span class="header-name">Content-Type:</span> application/json
+<span class="header-name">X-App-ID:</span> xvio-scan
+
+{
+  "tenantId": "<span class="masked">{TENANT_ID}</span>",
+  "userId": "<span class="masked">{USER_ID}</span>",
+  "jobId": "<span class="masked">{JOB_ID}</span>",
+  "createdAt": "2026-03-09T10:00:00.000Z",
+  "objectType": "Lead"
+}</div>
+
+  <span class="label label-res">RESPONSE 200 OK</span>
+  <div class="http-block"><span class="status">HTTP/1.1 200 OK</span>
+<span class="header-name">Content-Type:</span> application/json
+
+{
+  "exportId": "<span class="masked">{EXPORT_ID}</span>",
+  "sfRecordId": "<span class="masked">{SF_RECORD_ID}</span>",
+  "message": "Exported successfully"
+}</div>
+  <div class="note">Uses admin-configured field mappings. Backend authenticates to Salesforce using stored OAuth tokens (AES-256-GCM encrypted). Auto-refreshes expired tokens.</div>
+</div>
+
+<div class="endpoint avoid-break">
+  <div class="endpoint-title">3b. GET /tenant/ai/exporters/history</div>
+  <div class="endpoint-desc">View export history for the current user.</div>
+
+  <span class="label label-req">REQUEST</span>
+  <div class="http-block"><span class="method">GET</span> /v1/tenant/ai/exporters/history?tenantId=<span class="masked">{TENANT_ID}</span>&amp;userId=<span class="masked">{USER_ID}</span> HTTP/1.1
+<span class="header-name">Host:</span> api.xvio.ai
+<span class="header-name">Authorization:</span> Bearer <span class="masked">{MASKED_JWT_TOKEN}</span>
+<span class="header-name">X-App-ID:</span> xvio-scan</div>
+
+  <span class="label label-res">RESPONSE 200 OK</span>
+  <div class="http-block"><span class="status">HTTP/1.1 200 OK</span>
+<span class="header-name">Content-Type:</span> application/json
+
+{
+  "exports": [
+    {
+      "exportId": "<span class="masked">{EXPORT_ID}</span>",
+      "jobId": "<span class="masked">{JOB_ID}</span>",
+      "destination": "salesforce",
+      "objectType": "Lead",
+      "sfRecordId": "<span class="masked">{SF_RECORD_ID}</span>",
+      "status": "success",
+      "exportedAt": "2026-03-09T10:10:00.000Z"
+    }
+  ],
+  "total": 1
+}</div>
+</div>
+
+<!-- 4. SUPPORTING -->
+<div class="page-break"></div>
+<h2>4. Supporting Endpoints</h2>
+
+<div class="endpoint avoid-break">
+  <div class="endpoint-title">4a. GET /tenant/quota</div>
+  <div class="endpoint-desc">Check remaining scan quota (per-user and per-org levels).</div>
+
+  <span class="label label-req">REQUEST</span>
+  <div class="http-block"><span class="method">GET</span> /v1/tenant/quota?tenantId=<span class="masked">{TENANT_ID}</span>&amp;userId=<span class="masked">{USER_ID}</span> HTTP/1.1
+<span class="header-name">Host:</span> api.xvio.ai
+<span class="header-name">Authorization:</span> Bearer <span class="masked">{MASKED_JWT_TOKEN}</span>
+<span class="header-name">X-App-ID:</span> xvio-scan</div>
+
+  <span class="label label-res">RESPONSE 200 OK</span>
+  <div class="http-block"><span class="status">HTTP/1.1 200 OK</span>
+<span class="header-name">Content-Type:</span> application/json
+
+{
+  "month": "2026-03",
+  "services": [
+    { "id": "<span class="masked">{SERVICE_ID}</span>", "name": "Business Card Scanner", "quota": 10, "used": 3, "remaining": 7 },
+    { "id": "<span class="masked">{SERVICE_ID_2}</span>", "name": "Expense Scanner", "quota": 10, "used": 0, "remaining": 10 },
+    { "id": "<span class="masked">{SERVICE_ID_3}</span>", "name": "Invoice Scanner", "quota": 10, "used": 1, "remaining": 9 }
+  ]
+}</div>
+</div>
+
+<div class="endpoint avoid-break">
+  <div class="endpoint-title">4b. GET /tenant/services</div>
+  <div class="endpoint-desc">List available scanning services for the tenant.</div>
+
+  <span class="label label-req">REQUEST</span>
+  <div class="http-block"><span class="method">GET</span> /v1/tenant/services?tenantId=<span class="masked">{TENANT_ID}</span> HTTP/1.1
+<span class="header-name">Host:</span> api.xvio.ai
+<span class="header-name">Authorization:</span> Bearer <span class="masked">{MASKED_JWT_TOKEN}</span>
+<span class="header-name">X-App-ID:</span> xvio-scan</div>
+
+  <span class="label label-res">RESPONSE 200 OK</span>
+  <div class="http-block"><span class="status">HTTP/1.1 200 OK</span>
+<span class="header-name">Content-Type:</span> application/json
+
+{
+  "services": [
+    {
+      "id": "<span class="masked">{SERVICE_ID}</span>", "appId": "xvio-scan",
+      "name": "Business Card Scanner",
+      "description": "Scan business cards and extract contact information.",
+      "order": 1, "icon": "id-card", "color": "#3B82F6",
+      "isDefault": true, "contactsEnabled": true, "dedupEnabled": true,
+      "allowedFileTypes": ["image", "pdf"], "showQuotaBar": false,
+      "quotaConfig": { "userLimit": 10, "userResetPeriod": "lifetime" },
+      "summaryFields": ["firstName", "lastName", "email", "phone", "Company", "jobTitle", "city"],
+      "scanFrame": { "enabled": false, "aspectRatio": "3.5:2" }
+    },
+    {
+      "id": "<span class="masked">{SERVICE_ID_2}</span>", "appId": "xvio-scan",
+      "name": "Expense Scanner",
+      "description": "Scan receipts and extract expense details.",
+      "order": 2, "icon": "receipt", "color": "#10B981",
+      "isDefault": false, "dedupEnabled": true,
+      "allowedFileTypes": ["image", "pdf"],
+      "quotaConfig": { "userLimit": 10, "userResetPeriod": "lifetime" },
+      "summaryFields": ["merchantName", "amount", "currency", "date", "category"]
+    },
+    {
+      "id": "<span class="masked">{SERVICE_ID_3}</span>", "appId": "xvio-scan",
+      "name": "Invoice Scanner",
+      "description": "Scan invoices and extract billing details.",
+      "order": 3, "icon": "file-text", "color": "#8B5CF6",
+      "isDefault": false, "dedupEnabled": true,
+      "allowedFileTypes": ["image", "pdf"],
+      "quotaConfig": { "userLimit": 10, "userResetPeriod": "lifetime" },
+      "summaryFields": ["vendorName", "invoiceNumber", "invoiceDate", "totalAmount", "currency"]
+    }
+  ]
+}</div>
+</div>
+
+<div class="page-break"></div>
+
+<div class="endpoint avoid-break">
+  <div class="endpoint-title">4c. GET /tenant/campaigns</div>
+  <div class="endpoint-desc">List Salesforce campaigns for scan attribution (fetched from Salesforce in real-time).</div>
+
+  <span class="label label-req">REQUEST</span>
+  <div class="http-block"><span class="method">GET</span> /v1/tenant/campaigns?tenantId=<span class="masked">{TENANT_ID}</span> HTTP/1.1
+<span class="header-name">Host:</span> api.xvio.ai
+<span class="header-name">Authorization:</span> Bearer <span class="masked">{MASKED_JWT_TOKEN}</span>
+<span class="header-name">X-App-ID:</span> xvio-scan</div>
+
+  <span class="label label-res">RESPONSE 200 OK</span>
+  <div class="http-block"><span class="status">HTTP/1.1 200 OK</span>
+<span class="header-name">Content-Type:</span> application/json
+
+{
+  "campaigns": [
+    {
+      "id": "<span class="masked">{SF_CAMPAIGN_ID}</span>",
+      "name": "Trade Show 2026",
+      "status": "Active",
+      "type": "Conference"
+    }
+  ]
+}</div>
+</div>
+
+<div class="endpoint avoid-break">
+  <div class="endpoint-title">4d. GET /tenant/system/health</div>
+  <div class="endpoint-desc">Health check endpoint (public, no authentication required).</div>
+
+  <span class="label label-req">REQUEST</span>
+  <div class="http-block"><span class="method">GET</span> /v1/tenant/system/health HTTP/1.1
+<span class="header-name">Host:</span> api.xvio.ai</div>
+
+  <span class="label label-res">RESPONSE 200 OK</span>
+  <div class="http-block"><span class="status">HTTP/1.1 200 OK</span>
+<span class="header-name">Content-Type:</span> application/json
+
+{
+  "status": "healthy",
+  "timestamp": "2026-03-09T10:00:00.000Z"
+}</div>
+</div>
+
+<!-- 5. JWT -->
+<hr class="section-divider">
+<h2>5. JWT Token Structure</h2>
+<p>All authenticated endpoints require a Bearer JWT token. The JWT payload contains:</p>
+<div class="http-block avoid-break">{
+  "sub": "<span class="masked">{USER_SUB}</span>",
+  "email": "<span class="masked">{USER_EMAIL}</span>",
+  "tenantId": "<span class="masked">{TENANT_ID}</span>",
+  "userId": "<span class="masked">{USER_ID}</span>",
+  "type": "tenant_user",
+  "jti": "<span class="masked">{UNIQUE_JWT_ID}</span>",
+  "iss": "api.xvio.ai",
+  "aud": "xvio-api",
+  "iat": 1709971200,
+  "exp": 1709972100
+}</div>
+<table class="avoid-break">
+  <tr><th>Setting</th><th>Value</th></tr>
+  <tr><td>Algorithm</td><td>RS256 (asymmetric)</td></tr>
+  <tr><td>Default expiry</td><td>15 minutes (configurable per tenant: 5 to 1440 minutes)</td></tr>
+  <tr><td>Signing key</td><td>Stored in AWS Secrets Manager, cached in Lambda for 5 minutes</td></tr>
+</table>
+
+<!-- 6. SECURITY HEADERS -->
+<h2>6. CORS and Security Headers</h2>
+<p>All API responses include the following security headers (via CloudFront Function):</p>
+<div class="http-block avoid-break"><span class="header-name">Strict-Transport-Security:</span> max-age=63072000; includeSubDomains; preload
+<span class="header-name">X-Content-Type-Options:</span> nosniff
+<span class="header-name">X-Frame-Options:</span> DENY
+<span class="header-name">X-XSS-Protection:</span> 1; mode=block
+<span class="header-name">Referrer-Policy:</span> strict-origin-when-cross-origin
+<span class="header-name">Permissions-Policy:</span> camera=(), microphone=(), geolocation=()</div>
+
+<p>CORS headers on authenticated responses:</p>
+<div class="http-block avoid-break"><span class="header-name">Access-Control-Allow-Origin:</span> https://scan.xvio.ai
+<span class="header-name">Access-Control-Allow-Credentials:</span> true
+<span class="header-name">Access-Control-Allow-Methods:</span> GET, POST, PUT, DELETE, OPTIONS
+<span class="header-name">Access-Control-Allow-Headers:</span> Authorization, Content-Type, X-App-ID, X-API-Key, X-API-Secret</div>
+
+<!-- CONTACT PAGE -->
+<div class="page-break"></div>
+<div class="contact-page">
+  <h2>Get in Touch</h2>
+  <p class="contact-desc">For questions about these API callouts, integration support, or to request API access for testing, please reach out to our team.</p>
+  <div class="contact-card">
+    <div class="contact-label">Contact Support</div>
+    <a href="mailto:support@xvio.ai" class="contact-email">support@xvio.ai</a>
+  </div>
+  <div class="contact-meta">
+    <strong>ExonPro Innovations LLP</strong><br>
+    xVio Scan &mdash; Sample API Callouts<br>
+    March 2026
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,148 @@
+AppExchange Security Review — Provide Environments
+====================================================
+
+
+ENVIRONMENT DETAILS
+-------------------
+Environment: Production
+Web Application: https://scan.xvio.ai
+API Base URL: https://api.xvio.ai/v1/tenant
+Region: ap-south-1 (Mumbai, India)
+
+The xVio Scan production environment is fully configured with a test tenant connected to a Salesforce sandbox org for review purposes.
+
+
+USERNAME AND PASSWORD AUTHENTICATION
+-------------------------------------
+
+Entry 1: xVio Scan Web App — Admin User
+  Type: Web App
+  URL: https://scan.xvio.ai
+  Login Method: Salesforce OAuth (no direct username/password — users authenticate via Salesforce login)
+  Description: xVio Scan uses Salesforce OAuth 2.0 with PKCE for user authentication. There is no standalone username/password login. Users click "Login with Salesforce" and are redirected to the Salesforce login page.
+
+Entry 2: Salesforce Test Org — System Administrator
+  Type: Salesforce Org
+  URL: [TODO: login.salesforce.com or test.salesforce.com]
+  Username: [TODO: your Salesforce test org admin username]
+  Password: [TODO: your Salesforce test org admin password]
+  Security Token: [TODO: your Salesforce security token]
+  Profile: System Administrator
+  Description: This Salesforce org has the xVio Scan Connected App installed and is linked to the xVio test tenant. Use these credentials when redirected to Salesforce login from scan.xvio.ai.
+
+Entry 3: Salesforce Test Org — Standard User (if applicable)
+  Type: Salesforce Org
+  URL: [TODO: same as above]
+  Username: [TODO: standard user username]
+  Password: [TODO: standard user password]
+  Security Token: [TODO: security token]
+  Profile: Standard User
+  Description: Standard user profile with access to the xVio Scan Connected App.
+
+
+API, OAUTH, AND SAML ACCESS
+-----------------------------
+
+Entry 1: Salesforce Connected App (OAuth 2.0)
+  Type: OAuth 2.0
+  Grant Type: Authorization Code with PKCE (S256)
+  Consumer Key: [TODO: your Connected App Consumer Key]
+  Callback URL: https://api.xvio.ai/v1/tenant/auth/callback
+  OAuth Scopes: api, refresh_token
+  Authorization URL: https://login.salesforce.com/services/oauth2/authorize (production) or https://test.salesforce.com/services/oauth2/authorize (sandbox)
+  Token URL: https://login.salesforce.com/services/oauth2/token
+  Description: The Connected App is configured in the Salesforce test org. xVio Scan initiates the OAuth flow, redirects to Salesforce for user consent, and exchanges the authorization code for tokens server-side. The client_secret is never exposed to the browser.
+
+Entry 2: xVio Scan API Authentication
+  Type: JWT Bearer Token
+  Base URL: https://api.xvio.ai/v1/tenant
+  Auth Flow: After Salesforce OAuth login, xVio Scan issues its own JWT (RS256 signed) for API authentication. The JWT is returned automatically after successful Salesforce login — no separate API key is needed.
+  Description: All API endpoints require a valid JWT in the Authorization header. Tokens are issued automatically during the login flow. No manual API key configuration is required.
+
+
+CLIENT APPS
+------------
+
+Entry 1: xVio Scan Web App (PWA)
+  Name: xVio Scan
+  Type: Progressive Web App
+  URL: https://scan.xvio.ai
+  Browser: Any modern browser (Chrome, Safari, Firefox, Edge)
+  Configuration: No installation required. Navigate to the URL and click "Login with Salesforce" to authenticate.
+  Description: Full-featured document scanning web app. Supports camera capture, file upload, AI-powered field extraction, and Salesforce export.
+
+
+MOBILE APPS
+-----------
+
+Entry 1: xVio Scan — iOS
+  Platform: iOS 15+
+  Framework: SvelteKit + Capacitor 6.2
+  Distribution: [TODO: Choose one]
+    Option A — App Store: [TODO: App Store URL if published]
+    Option B — TestFlight: [TODO: TestFlight invite link]
+    Option C — .ipa file: [TODO: attach ad-hoc .ipa build]
+  Configuration: After installation, tap "Login with Salesforce" to authenticate using the same Salesforce test org credentials provided above.
+
+Entry 2: xVio Scan — Android
+  Platform: Android 8.0+ (API level 26)
+  Framework: SvelteKit + Capacitor 6.0
+  Distribution: [TODO: Choose one]
+    Option A — Google Play: [TODO: Play Store URL if published]
+    Option B — Internal Testing: [TODO: Google Play internal testing link]
+    Option C — .apk file: [TODO: attach signed .apk build]
+  Configuration: After installation, tap "Login with Salesforce" to authenticate using the same Salesforce test org credentials provided above.
+
+
+INSTALLATION LINKS
+-------------------
+
+Entry 1: Web App
+  URL: https://scan.xvio.ai
+  Type: Web Application (no installation required)
+
+Entry 2: iOS App
+  URL: [TODO: App Store or TestFlight link]
+
+Entry 3: Android App
+  URL: [TODO: Play Store or internal testing link]
+
+
+OTHER INFORMATION
+-----------------
+Testing Instructions:
+
+1. AUTHENTICATION FLOW:
+   - Navigate to https://scan.xvio.ai
+   - Click "Login with Salesforce"
+   - Enter the Salesforce test org credentials provided above
+   - You will be redirected back to xVio Scan, authenticated
+
+2. DOCUMENT SCANNING:
+   - Click "New Scan" and select a document type (Business Card, Invoice, Expense, ID Document)
+   - Upload a sample document image or use camera capture
+   - The AI pipeline processes the document: Textract OCR → Bedrock LLM field extraction
+   - Review extracted fields and edit if needed
+
+3. SALESFORCE EXPORT:
+   - After scanning, click "Export to Salesforce"
+   - The extracted data is sent to Salesforce via REST API
+   - Verify the record was created in the Salesforce test org (Leads, Contacts, or Cases depending on document type)
+
+4. IMPORTANT NOTES:
+   - xVio Scan does NOT install any code in the Salesforce org (no managed package, no Apex, no Lightning Components)
+   - The only Salesforce integration is through the Connected App OAuth flow and Salesforce REST API
+   - All processing happens on AWS infrastructure (Lambda, DynamoDB, S3, Textract, Bedrock)
+   - No Salesforce data is persisted outside Salesforce except OAuth tokens (encrypted with AES-256-GCM in AWS Secrets Manager) and basic user profile (email, name) for session display
+   - The test tenant has quota limits configured — if you hit a quota limit, contact support@xvio.ai
+
+5. SECURITY CONTROLS ACTIVE IN PRODUCTION:
+   - AWS WAF v2 with OWASP rules (may block some scanner traffic — contact us if needed)
+   - Rate limiting on auth endpoints (DynamoDB-based per-IP counters)
+   - API Gateway throttling (1000 req/min, 500 burst)
+   - CORS with explicit origin allowlist
+   - TLS 1.2+ enforced on all connections
+
+6. SUPPORT CONTACT:
+   - Email: support@xvio.ai
+   - If you encounter any issues during testing, please reach out and we will assist promptly.

@@ -1,0 +1,751 @@
+xVio Scan — Sample API Callouts
+================================
+
+Base URL: https://api.xvio.ai/v1
+All requests use HTTPS (TLS 1.2+). All responses are JSON (Content-Type: application/json).
+
+
+COMMON HEADERS
+--------------
+Authorization: Bearer {JWT}          -- RS256 JWT issued by xVio Scan (required on authenticated endpoints)
+X-App-ID: xvio-scan                  -- Application identifier (required on tenant endpoints)
+Content-Type: application/json       -- Request body format
+Origin: https://scan.xvio.ai         -- CORS origin (validated against allowlist)
+
+
+ERROR RESPONSE FORMAT (all endpoints)
+-------------------------------------
+All error responses follow this structure:
+
+HTTP/1.1 {statusCode}
+Content-Type: application/json
+
+{
+  "error": "ERROR_CODE",
+  "message": "Human-readable description",
+  "errorCode": "ERROR_CODE"
+}
+
+Common error codes: UNAUTHORIZED, FORBIDDEN, NOT_FOUND, VALIDATION_ERROR, RATE_LIMITED, QUOTA_EXCEEDED
+
+
+================================================================================
+1. AUTHENTICATION ENDPOINTS
+================================================================================
+
+
+1a. POST /tenant/auth/login
+---------------------------
+Initiates Salesforce OAuth 2.0 + PKCE login flow. Returns available auth methods and Salesforce authorization URL.
+
+REQUEST:
+
+POST /v1/tenant/auth/login HTTP/1.1
+Host: api.xvio.ai
+Content-Type: application/json
+X-App-ID: xvio-scan
+Origin: https://scan.xvio.ai
+
+{
+  "customId": "free",
+  "redirectUri": "https://scan.xvio.ai/auth/callback"
+}
+
+RESPONSE (200 OK):
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+Access-Control-Allow-Origin: https://scan.xvio.ai
+Access-Control-Allow-Credentials: true
+
+{
+  "authMethods": {
+    "salesforce": {
+      "authUrl": "https://login.salesforce.com/services/oauth2/authorize?response_type=code&client_id={SF_CLIENT_ID}&redirect_uri=https%3A%2F%2Fapi.xvio.ai%2Fv1%2Ftenant%2Fauth%2Fcallback&state={CSRF_STATE}&code_challenge={PKCE_CHALLENGE}&code_challenge_method=S256&scope=api+refresh_token",
+      "state": "{CSRF_STATE}"
+    },
+    "cognito": {
+      "enabled": true
+    }
+  },
+  "tenant": {
+    "id": "{TENANT_ID}",
+    "name": "xVio Free",
+    "customId": "free"
+  }
+}
+
+RATE LIMIT: 10 requests per minute per IP.
+
+
+1b. GET /tenant/auth/callback
+------------------------------
+Salesforce OAuth callback. Exchanges authorization code for tokens. Redirects to web app or mobile deep link.
+
+REQUEST:
+
+GET /v1/tenant/auth/callback?code={SF_AUTH_CODE}&state={CSRF_STATE} HTTP/1.1
+Host: api.xvio.ai
+
+RESPONSE (302 Redirect — Web):
+
+HTTP/1.1 302 Found
+Location: https://scan.xvio.ai/auth/callback?authSuccess=true
+Set-Cookie: token={MASKED_JWT_TOKEN}; HttpOnly; Secure; SameSite=None; Domain=.xvio.ai; Path=/; Max-Age=900
+Set-Cookie: tenantId={TENANT_ID}; Secure; SameSite=None; Domain=.xvio.ai; Path=/; Max-Age=2592000
+
+RESPONSE (302 Redirect -- Mobile):
+
+HTTP/1.1 302 Found
+Location: xvio://oauth/callback?authSuccess=true&code={ONE_TIME_CODE}&tenantId={TENANT_ID}
+
+Note: Mobile redirects use a one-time auth code (60s TTL) instead of tokens in the URL. The mobile app exchanges this code via the /auth/exchange endpoint.
+
+
+1c. POST /tenant/auth/exchange
+-------------------------------
+Exchanges one-time auth code for JWT tokens. Used by mobile apps after deep link callback.
+
+REQUEST:
+
+POST /v1/tenant/auth/exchange HTTP/1.1
+Host: api.xvio.ai
+Content-Type: application/json
+
+{
+  "code": "{ONE_TIME_AUTH_CODE}"
+}
+
+RESPONSE (200 OK):
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "accessToken": "{MASKED_JWT_TOKEN}",
+  "token": "{MASKED_JWT_TOKEN}",
+  "refreshToken": "{REFRESH_TOKEN}",
+  "expiresIn": 900,
+  "tenantId": "{TENANT_ID}",
+  "user": {
+    "id": "{USER_ID}",
+    "email": "{USER_EMAIL}",
+    "name": "{USER_NAME}"
+  }
+}
+
+Note: The one-time code expires after 60 seconds and is deleted after first use.
+
+
+1d. POST /tenant/auth/refresh
+------------------------------
+Refreshes an expired JWT using the refresh token.
+
+REQUEST:
+
+POST /v1/tenant/auth/refresh HTTP/1.1
+Host: api.xvio.ai
+Content-Type: application/json
+
+{
+  "refreshToken": "{REFRESH_TOKEN}",
+  "tenantId": "{TENANT_ID}"
+}
+
+RESPONSE (200 OK):
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+Set-Cookie: token={MASKED_JWT_TOKEN}; HttpOnly; Secure; SameSite=None; Domain=.xvio.ai; Path=/; Max-Age=900
+
+{
+  "accessToken": "{MASKED_JWT_TOKEN}",
+  "expiresIn": 900
+}
+
+RATE LIMIT: 30 requests per minute per IP.
+
+
+1e. POST /tenant/auth/logout
+------------------------------
+Invalidates session, revokes JWT and optionally the refresh token.
+
+REQUEST:
+
+POST /v1/tenant/auth/logout HTTP/1.1
+Host: api.xvio.ai
+Authorization: Bearer {MASKED_JWT_TOKEN}
+Content-Type: application/json
+
+{
+  "refreshToken": "{REFRESH_TOKEN}"
+}
+
+RESPONSE (200 OK):
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+Set-Cookie: token=; HttpOnly; Secure; SameSite=None; Domain=.xvio.ai; Path=/; Max-Age=0
+Set-Cookie: tenantId=; Secure; SameSite=None; Domain=.xvio.ai; Path=/; Max-Age=0
+
+{
+  "success": true,
+  "message": "Logged out successfully"
+}
+
+
+================================================================================
+2. SCANNING AND JOBS ENDPOINTS
+================================================================================
+
+
+2a. POST /tenant/jobs
+---------------------
+Upload a document for AI scanning. Accepts base64-encoded file.
+
+REQUEST:
+
+POST /v1/tenant/jobs HTTP/1.1
+Host: api.xvio.ai
+Authorization: Bearer {MASKED_JWT_TOKEN}
+Content-Type: application/json
+X-App-ID: xvio-scan
+
+{
+  "tenantId": "{TENANT_ID}",
+  "userId": "{USER_ID}",
+  "serviceId": "{SERVICE_ID}",
+  "file": {
+    "name": "business-card.jpg",
+    "type": "image/jpeg",
+    "data": "{BASE64_FILE_DATA}"
+  }
+}
+
+RESPONSE (201 Created):
+
+HTTP/1.1 201 Created
+Content-Type: application/json
+
+{
+  "jobId": "{JOB_ID}",
+  "status": "pending",
+  "progress": 0,
+  "serviceId": "{SERVICE_ID}",
+  "serviceName": "Business Card Scanner",
+  "createdAt": "2026-03-09T10:00:00.000Z"
+}
+
+Note: File size limit is 20MB for base64 upload. For larger files (up to 50MB), use the presigned upload endpoint.
+
+
+2b. POST /tenant/services/{serviceId}/upload-presigned
+------------------------------------------------------
+Get a presigned S3 URL for large file uploads.
+
+REQUEST:
+
+POST /v1/tenant/services/{SERVICE_ID}/upload-presigned HTTP/1.1
+Host: api.xvio.ai
+Authorization: Bearer {MASKED_JWT_TOKEN}
+Content-Type: application/json
+X-App-ID: xvio-scan
+
+{
+  "tenantId": "{TENANT_ID}",
+  "userId": "{USER_ID}",
+  "filename": "invoice-scan.pdf",
+  "contentType": "application/pdf"
+}
+
+RESPONSE (200 OK):
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "uploadUrl": "{PRESIGNED_S3_URL}",
+  "jobId": "{JOB_ID}",
+  "expiresIn": 300
+}
+
+The client then uploads the file directly to S3 using a PUT request to the presigned URL:
+
+PUT {uploadUrl} HTTP/1.1
+Content-Type: application/pdf
+Content-Length: 2456789
+
+{binary file data}
+
+
+2c. GET /tenant/jobs
+--------------------
+List scanned documents with pagination and delta sync support.
+
+REQUEST:
+
+GET /v1/tenant/jobs?tenantId={TENANT_ID}&userId={USER_ID}&limit=50 HTTP/1.1
+Host: api.xvio.ai
+Authorization: Bearer {MASKED_JWT_TOKEN}
+X-App-ID: xvio-scan
+
+RESPONSE (200 OK):
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "jobs": [
+    {
+      "jobId": "{JOB_ID}",
+      "tenantId": "{TENANT_ID}",
+      "appId": "xvio-scan",
+      "userId": "{USER_ID}",
+      "type": "scan",
+      "status": "completed",
+      "progress": 100,
+      "serviceId": "{SERVICE_ID}",
+      "serviceName": "Business Card Scanner",
+      "summaryData": {
+        "firstName": "Jane",
+        "lastName": "Smith",
+        "email": "jane@acme.com",
+        "phone": "+91 98765 43210",
+        "Company": "Acme Solutions",
+        "jobTitle": "Director of Engineering"
+      },
+      "metadata": {
+        "filename": "business-card.jpg",
+        "fileSize": 245678
+      },
+      "createdAt": "2026-03-09T10:00:00.000Z",
+      "updatedAt": "2026-03-09T10:00:45.000Z"
+    }
+  ],
+  "total": 1,
+  "nextToken": null
+}
+
+Delta sync (fetch only changes since last sync):
+
+GET /v1/tenant/jobs?tenantId=...&userId=...&updatedAfter=2026-03-09T09:00:00.000Z HTTP/1.1
+
+
+2d. GET /tenant/jobs/{jobId}
+----------------------------
+Get full scan details including all extracted data.
+
+REQUEST:
+
+GET /v1/tenant/jobs/{JOB_ID}?tenantId={TENANT_ID}&userId={USER_ID} HTTP/1.1
+Host: api.xvio.ai
+Authorization: Bearer {MASKED_JWT_TOKEN}
+X-App-ID: xvio-scan
+
+RESPONSE (200 OK):
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "jobId": "{JOB_ID}",
+  "tenantId": "{TENANT_ID}",
+  "appId": "xvio-scan",
+  "userId": "{USER_ID}",
+  "type": "scan",
+  "status": "completed",
+  "progress": 100,
+  "serviceId": "{SERVICE_ID}",
+  "serviceName": "Business Card Scanner",
+  "summaryData": {
+    "firstName": "Jane",
+    "lastName": "Smith",
+    "email": "jane@acme.com",
+    "phone": "+91 98765 43210",
+    "Company": "Acme Solutions",
+    "jobTitle": "Director of Engineering"
+  },
+  "extractedData": {
+    "firstName": "Jane",
+    "lastName": "Smith",
+    "email": "jane@acme.com",
+    "phone": "+91 98765 43210",
+    "Company": "Acme Solutions",
+    "jobTitle": "Director of Engineering",
+    "city": "Mumbai",
+    "website": "www.acmesolutions.com"
+  },
+  "metadata": {
+    "filename": "business-card.jpg",
+    "fileSize": 245678
+  },
+  "createdAt": "2026-03-09T10:00:00.000Z",
+  "updatedAt": "2026-03-09T10:00:45.000Z",
+  "completedAt": "2026-03-09T10:00:45.000Z"
+}
+
+
+2e. PUT /tenant/jobs/{jobId}
+----------------------------
+Update extracted field values (manual correction before export).
+
+REQUEST:
+
+PUT /v1/tenant/jobs/{JOB_ID} HTTP/1.1
+Host: api.xvio.ai
+Authorization: Bearer {MASKED_JWT_TOKEN}
+Content-Type: application/json
+X-App-ID: xvio-scan
+
+{
+  "tenantId": "{TENANT_ID}",
+  "userId": "{USER_ID}",
+  "extractedData": {
+    "firstName": "Jane",
+    "lastName": "Smith-Johnson",
+    "email": "jane.smith@acme.com",
+    "phone": "+91 98765 43210",
+    "Company": "Acme Solutions Pvt Ltd",
+    "jobTitle": "Director of Engineering",
+    "city": "Mumbai"
+  }
+}
+
+RESPONSE (200 OK):
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "jobId": "{JOB_ID}",
+  "status": "completed",
+  "updatedAt": "2026-03-09T10:05:00.000Z"
+}
+
+
+2f. DELETE /tenant/jobs/{jobId}
+-------------------------------
+Delete a scan and its associated S3 files.
+
+REQUEST:
+
+DELETE /v1/tenant/jobs/{JOB_ID}?tenantId={TENANT_ID}&userId={USER_ID} HTTP/1.1
+Host: api.xvio.ai
+Authorization: Bearer {MASKED_JWT_TOKEN}
+X-App-ID: xvio-scan
+
+RESPONSE (200 OK):
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "success": true,
+  "message": "Job deleted successfully"
+}
+
+
+================================================================================
+3. SALESFORCE EXPORT ENDPOINTS
+================================================================================
+
+
+3a. POST /tenant/ai/exporters/salesforce
+-----------------------------------------
+Export scan data to Salesforce CRM as a Lead, Contact, Case, or custom sObject.
+
+REQUEST:
+
+POST /v1/tenant/ai/exporters/salesforce HTTP/1.1
+Host: api.xvio.ai
+Authorization: Bearer {MASKED_JWT_TOKEN}
+Content-Type: application/json
+X-App-ID: xvio-scan
+
+{
+  "tenantId": "{TENANT_ID}",
+  "userId": "{USER_ID}",
+  "jobId": "{JOB_ID}",
+  "createdAt": "2026-03-09T10:00:00.000Z",
+  "objectType": "Lead"
+}
+
+RESPONSE (200 OK):
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "exportId": "{EXPORT_ID}",
+  "sfRecordId": "{SF_RECORD_ID}",
+  "message": "Exported successfully"
+}
+
+Note: Uses field mappings configured per service by the admin. The backend authenticates to Salesforce using stored OAuth tokens (AES-256-GCM encrypted). If the access token is expired, it automatically refreshes before retrying.
+
+
+3b. GET /tenant/ai/exporters/history
+-------------------------------------
+View export history for the current user.
+
+REQUEST:
+
+GET /v1/tenant/ai/exporters/history?tenantId={TENANT_ID}&userId={USER_ID} HTTP/1.1
+Host: api.xvio.ai
+Authorization: Bearer {MASKED_JWT_TOKEN}
+X-App-ID: xvio-scan
+
+RESPONSE (200 OK):
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "exports": [
+    {
+      "exportId": "{EXPORT_ID}",
+      "jobId": "{JOB_ID}",
+      "destination": "salesforce",
+      "objectType": "Lead",
+      "sfRecordId": "{SF_RECORD_ID}",
+      "status": "success",
+      "exportedAt": "2026-03-09T10:10:00.000Z"
+    }
+  ],
+  "total": 1
+}
+
+
+================================================================================
+4. SUPPORTING ENDPOINTS
+================================================================================
+
+
+4a. GET /tenant/quota
+---------------------
+Check remaining scan quota (per-user and per-org levels).
+
+REQUEST:
+
+GET /v1/tenant/quota?tenantId={TENANT_ID}&userId={USER_ID} HTTP/1.1
+Host: api.xvio.ai
+Authorization: Bearer {MASKED_JWT_TOKEN}
+X-App-ID: xvio-scan
+
+RESPONSE (200 OK):
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "month": "2026-03",
+  "services": [
+    {
+      "id": "{SERVICE_ID}",
+      "name": "Business Card Scanner",
+      "quota": 10,
+      "used": 3,
+      "remaining": 7
+    },
+    {
+      "id": "{SERVICE_ID_2}",
+      "name": "Expense Scanner",
+      "quota": 10,
+      "used": 0,
+      "remaining": 10
+    },
+    {
+      "id": "{SERVICE_ID_3}",
+      "name": "Invoice Scanner",
+      "quota": 10,
+      "used": 1,
+      "remaining": 9
+    }
+  ]
+}
+
+
+4b. GET /tenant/services
+------------------------
+List available scanning services for the tenant.
+
+REQUEST:
+
+GET /v1/tenant/services?tenantId={TENANT_ID} HTTP/1.1
+Host: api.xvio.ai
+Authorization: Bearer {MASKED_JWT_TOKEN}
+X-App-ID: xvio-scan
+
+RESPONSE (200 OK):
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "services": [
+    {
+      "id": "{SERVICE_ID}",
+      "appId": "xvio-scan",
+      "name": "Business Card Scanner",
+      "description": "Scan business cards and extract contact information.",
+      "order": 1,
+      "icon": "id-card",
+      "color": "#3B82F6",
+      "isDefault": true,
+      "contactsEnabled": true,
+      "dedupEnabled": true,
+      "allowedFileTypes": ["image", "pdf"],
+      "showQuotaBar": false,
+      "quotaConfig": {
+        "userLimit": 10,
+        "userResetPeriod": "lifetime"
+      },
+      "summaryFields": ["firstName", "lastName", "email", "phone", "Company", "jobTitle", "city"],
+      "scanFrame": {
+        "enabled": false,
+        "aspectRatio": "3.5:2"
+      }
+    },
+    {
+      "id": "{SERVICE_ID_2}",
+      "appId": "xvio-scan",
+      "name": "Expense Scanner",
+      "description": "Scan receipts and extract expense details.",
+      "order": 2,
+      "icon": "receipt",
+      "color": "#10B981",
+      "isDefault": false,
+      "contactsEnabled": false,
+      "dedupEnabled": true,
+      "allowedFileTypes": ["image", "pdf"],
+      "showQuotaBar": false,
+      "quotaConfig": {
+        "userLimit": 10,
+        "userResetPeriod": "lifetime"
+      },
+      "summaryFields": ["merchantName", "amount", "currency", "date", "category", "paymentMethod", "description"],
+      "scanFrame": {
+        "enabled": false,
+        "aspectRatio": "4:3"
+      }
+    },
+    {
+      "id": "{SERVICE_ID_3}",
+      "appId": "xvio-scan",
+      "name": "Invoice Scanner",
+      "description": "Scan invoices and extract billing details.",
+      "order": 3,
+      "icon": "file-text",
+      "color": "#8B5CF6",
+      "isDefault": false,
+      "contactsEnabled": false,
+      "dedupEnabled": true,
+      "allowedFileTypes": ["image", "pdf"],
+      "showQuotaBar": false,
+      "quotaConfig": {
+        "userLimit": 10,
+        "userResetPeriod": "lifetime"
+      },
+      "summaryFields": ["vendorName", "invoiceNumber", "invoiceDate", "dueDate", "totalAmount", "currency", "taxAmount", "description"],
+      "scanFrame": {
+        "enabled": false,
+        "aspectRatio": "4:3"
+      }
+    }
+  ]
+}
+
+
+4c. GET /tenant/campaigns
+--------------------------
+List Salesforce campaigns for scan attribution.
+
+REQUEST:
+
+GET /v1/tenant/campaigns?tenantId={TENANT_ID} HTTP/1.1
+Host: api.xvio.ai
+Authorization: Bearer {MASKED_JWT_TOKEN}
+X-App-ID: xvio-scan
+
+RESPONSE (200 OK):
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "campaigns": [
+    {
+      "id": "{SF_CAMPAIGN_ID}",
+      "name": "Trade Show Mumbai 2026",
+      "status": "Active",
+      "type": "Conference"
+    }
+  ]
+}
+
+Note: Campaigns are fetched from Salesforce in real-time via SOQL query configured per service.
+
+
+4d. GET /tenant/system/health
+------------------------------
+Health check endpoint (public, no authentication required).
+
+REQUEST:
+
+GET /v1/tenant/system/health HTTP/1.1
+Host: api.xvio.ai
+
+RESPONSE (200 OK):
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "status": "healthy",
+  "timestamp": "2026-03-09T10:00:00.000Z"
+}
+
+
+================================================================================
+5. JWT TOKEN STRUCTURE
+================================================================================
+
+All authenticated endpoints require a Bearer JWT token. The JWT payload contains:
+
+{
+  "sub": "{USER_SUB}",
+  "email": "{USER_EMAIL}",
+  "tenantId": "{TENANT_ID}",
+  "userId": "{USER_ID}",
+  "type": "tenant_user",
+  "jti": "{UNIQUE_JWT_ID}",
+  "iss": "api.xvio.ai",
+  "aud": "xvio-api",
+  "iat": 1709971200,
+  "exp": 1709972100
+}
+
+Algorithm: RS256 (asymmetric)
+Default expiry: 15 minutes (configurable per tenant: 5 to 1440 minutes)
+Signing key: Stored in AWS Secrets Manager, cached in Lambda for 5 minutes
+
+
+================================================================================
+6. CORS AND SECURITY HEADERS
+================================================================================
+
+All API responses include the following security headers (via CloudFront Function):
+
+Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+X-XSS-Protection: 1; mode=block
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+CORS headers on authenticated responses:
+
+Access-Control-Allow-Origin: https://scan.xvio.ai
+Access-Control-Allow-Credentials: true
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+Access-Control-Allow-Headers: Authorization, Content-Type, X-App-ID, X-API-Key, X-API-Secret

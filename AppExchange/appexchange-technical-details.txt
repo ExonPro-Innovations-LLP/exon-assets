@@ -1,0 +1,158 @@
+AppExchange Security Review — Technical Details
+================================================
+
+
+DESCRIBE YOUR SOLUTION
+----------------------
+xVio Scan is an AI-powered document scanning platform that transforms physical documents into structured, exportable data and integrates natively with Salesforce as a Connected App.
+
+Users scan documents (business cards, invoices, receipts, ID documents, forms, contracts) via mobile camera (iOS/Android) or web upload. The platform runs a two-stage AI pipeline: AWS Textract performs OCR text extraction, then AWS Bedrock (LLM) parses the raw text into structured fields using configurable prompt templates per document type. Extracted data is automatically exported to Salesforce as Leads, Contacts, Cases, or custom sObjects with admin-configurable field mappings.
+
+The solution is 100% serverless, built entirely on AWS (Lambda, DynamoDB, S3, API Gateway, SQS, Textract, Bedrock). No customer data leaves AWS infrastructure. All resources are deployed in ap-south-1 (Mumbai, India).
+
+Key capabilities include offline scanning with auto-sync, Salesforce Campaign attribution for lead source tracking, dual-level quota management (per-user and per-org), duplicate detection, and real-time scan status updates via GraphQL WebSocket (AWS AppSync).
+
+Documentation: A full Technical Solution Overview PDF is attached covering architecture, data flow, authentication, encryption, API endpoints, and infrastructure security.
+
+
+WEB APP OR SERVICE — FRAMEWORKS AND LANGUAGES
+----------------------------------------------
+Backend: Node.js 20 (TypeScript) running on AWS Lambda (ARM64 architecture). Infrastructure defined with AWS CDK (TypeScript).
+
+Frontend Web App: SvelteKit 2.0 (Progressive Web App) hosted at scan.xvio.ai.
+
+Admin Console: SvelteKit 2.0 hosted at console.xvio.ai.
+
+API Layer: AWS API Gateway (REST) with AWS CloudFront CDN and AWS WAF v2 for edge protection.
+
+Real-time: AWS AppSync (GraphQL WebSocket) for live scan status updates.
+
+Database: Amazon DynamoDB (single-table design).
+
+Storage: Amazon S3 (4 buckets — document uploads, exports, feedback, static assets).
+
+Queue: Amazon SQS for async job processing.
+
+AI Services: AWS Textract (OCR) and AWS Bedrock Converse API (LLM field extraction).
+
+
+PLATFORMS OTHER THAN SALESFORCE
+-------------------------------
+Amazon Web Services (AWS) — The entire backend runs on AWS serverless services:
+
+- AWS Lambda: All compute (auth, scanning, export, admin logic)
+- Amazon DynamoDB: All application data (tenants, users, scans, quotas, sessions)
+- Amazon S3: Document storage with SSE-S3 encryption and Block Public Access
+- AWS API Gateway: REST API endpoints with WAF protection
+- AWS SQS: Async scan job processing queue
+- AWS Textract: Document OCR (text, forms, tables, expense, ID extraction)
+- AWS Bedrock: LLM-based structured field extraction from OCR output
+- AWS AppSync: Real-time GraphQL WebSocket for scan status updates
+- AWS Secrets Manager: JWT signing keys and per-tenant Salesforce credentials (KMS encrypted)
+- Amazon CloudFront: CDN with security headers (HSTS, X-Content-Type-Options, X-Frame-Options)
+- AWS WAF v2: OWASP rules, rate limiting, IP reputation, SQLi protection
+- Amazon Cognito: Admin console authentication
+- AWS CloudWatch and CloudTrail: Logging, monitoring, alerting, and audit trail
+
+No other third-party platforms are used. No data leaves AWS.
+
+
+INTEGRATION WITH TECHNOLOGY OUTSIDE SALESFORCE
+----------------------------------------------
+The solution integrates with Salesforce via OAuth 2.0 Authorization Code flow with PKCE (RFC 7636, S256 challenge). The Connected App uses minimal OAuth scopes: "api" and "refresh_token" only.
+
+Integration flow:
+1. User initiates login from the xVio Scan app, which redirects to Salesforce login page.
+2. After user authorizes, Salesforce redirects back to our callback URL (https://api.xvio.ai/v1/tenant/auth/callback).
+3. The callback Lambda exchanges the authorization code for tokens server-side. The client never sees the client_secret.
+4. OAuth tokens (access and refresh) are encrypted with AES-256-GCM at the application level and stored in AWS Secrets Manager (KMS encrypted at rest).
+5. When exporting scan data, the backend Lambda authenticates to Salesforce using stored tokens, maps extracted fields per admin configuration, and creates or updates records via the Salesforce REST API.
+6. On 401 responses, the refresh token is automatically exchanged for new tokens, re-encrypted, and stored.
+
+Salesforce Org ID validation: After OAuth callback, the organization_id from Salesforce userinfo is compared against the tenant configuration. A mismatch results in ACCESS DENIED with audit logging.
+
+Sandbox support: The solution supports both login.salesforce.com (production) and test.salesforce.com (sandbox) environments.
+
+The solution also supports Zoho CRM and Zoho Books export via OAuth 2.0 integration for non-Salesforce customers.
+
+
+IS YOUR SOLUTION AN API-ONLY APP?
+----------------------------------
+No. xVio Scan includes a full user interface across multiple platforms:
+
+- Web App (Progressive Web App) at scan.xvio.ai
+- iOS App (SvelteKit + Capacitor 6.2) distributed via App Store
+- Android App (SvelteKit + Capacitor 6.0) distributed via Google Play
+- Admin Console at console.xvio.ai for tenant configuration, service management, and user management
+
+The backend exposes REST API endpoints via AWS API Gateway for all client interactions, but it is not an API-only solution.
+
+
+SALESFORCE PLATFORM TECHNOLOGY
+------------------------------
+xVio Scan does not include Salesforce Platform technology such as Lightning Components, Apex classes, Visualforce pages, or custom Salesforce objects. The solution runs entirely outside the Salesforce Platform on AWS infrastructure.
+
+The integration with Salesforce is through the Connected App OAuth flow and Salesforce REST API only. The solution creates and updates standard Salesforce objects (Leads, Contacts, Cases) and supports custom sObjects through admin-configurable field mappings. No managed package or Salesforce-native code is installed in the customer's org.
+
+
+OAUTH TOKEN STORAGE
+--------------------
+Salesforce OAuth tokens (access token and refresh token) are stored with multiple layers of encryption:
+
+1. Application-level encryption: Tokens are encrypted using AES-256-GCM before storage. Each encryption uses a unique 16-byte random initialization vector (IV). The encrypted format is {iv:authTag:ciphertext}. The encryption key is stored in AWS Secrets Manager.
+
+2. Infrastructure-level encryption: AWS Secrets Manager provides KMS-managed encryption at rest for the encryption keys themselves.
+
+3. Per-tenant isolation: Tokens are stored under tenant-scoped paths following the pattern /xvio/{stage}/tenant/{tenantId}/sf-oauth, ensuring complete tenant isolation.
+
+4. Token refresh: When the access token expires or a 401 is returned from Salesforce, the refresh token is automatically exchanged, and the new tokens are re-encrypted and stored.
+
+5. Token revocation: On user logout, tokens are revoked and deleted from storage.
+
+6. Masking: Salesforce credentials are masked in all API responses (e.g., 3MVG9...***). Tokens are never returned in list or get endpoints.
+
+Additionally, JWT tokens issued by xVio Scan for session management use RS256 (asymmetric) signing. The signing keys are stored in AWS Secrets Manager with 5-minute Lambda caching. Refresh tokens are stored as SHA-256 hashes in DynamoDB — the plain token is never persisted.
+
+
+SALESFORCE DATA STORED OUTSIDE SALESFORCE
+-----------------------------------------
+The following Salesforce data is stored outside the Salesforce Platform:
+
+1. OAuth tokens (access token and refresh token): Encrypted with AES-256-GCM and stored in AWS Secrets Manager. Used for API authentication. Deleted on disconnection or logout.
+
+2. Salesforce instance URL: Encrypted and stored alongside OAuth tokens. Used to route API calls to the correct Salesforce instance.
+
+3. Basic user profile (email and display name): Stored in DynamoDB. Retrieved from Salesforce userinfo during OAuth callback. Used for session display and audit logging.
+
+4. Salesforce Organization ID: Stored in DynamoDB as part of tenant configuration. Used for org validation during login to prevent unauthorized org access.
+
+No Salesforce record data (Leads, Contacts, Cases, or custom objects) is persisted outside Salesforce. During the export operation, extracted scan data is sent to the Salesforce REST API in real-time and is not cached or stored in our system after the export completes. The only data retained is the export history metadata (timestamp, status, Salesforce record ID) for audit purposes.
+
+
+MOBILE APP
+----------
+Yes, xVio Scan is available as a mobile app.
+
+
+MOBILE DEVICES AND OPERATING SYSTEMS
+-------------------------------------
+iOS: Supported via native app built with SvelteKit and Capacitor 6.2. Distributed through the Apple App Store. Requires iOS 15 or later. Uses ASWebAuthenticationSession for secure OAuth browser flow.
+
+Android: Supported via native app built with SvelteKit and Capacitor 6.0. Distributed through Google Play Store. Requires Android 8.0 (API level 26) or later. Uses Chrome Custom Tabs for secure OAuth browser flow.
+
+Both platforms support:
+- Camera-based document scanning with viewfinder overlay
+- Offline scanning with automatic sync when connectivity is restored
+- Secure token storage using OS-level encryption (iOS Keychain / Android EncryptedSharedPreferences)
+- HTTPS-only communication (iOS ATS enforced, Android Network Security Config blocks cleartext)
+- Deep link authentication via xvio:// scheme with one-time 60-second exchange codes
+
+
+BROWSER EXTENSION
+-----------------
+xVio Scan does not include a browser extension. The web application is a Progressive Web App (PWA) accessed directly at scan.xvio.ai through any modern web browser.
+
+
+DESKTOP OR CLIENT APP
+---------------------
+xVio Scan does not include a standalone desktop or client application. The solution is accessed through the web browser (Progressive Web App at scan.xvio.ai) or through the native mobile apps (iOS and Android). The admin console is a web application at console.xvio.ai. No software installation is required on desktop computers.
